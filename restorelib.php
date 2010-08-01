@@ -47,6 +47,8 @@
 //
 //-----------------------------------------------------------
 
+defined('MOODLE_INTERNAL') || die();
+
 /**
  * This function executes all the restore procedure about this mod
  */

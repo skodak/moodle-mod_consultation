@@ -24,6 +24,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+defined('MOODLE_INTERNAL') || die();
+
 //--- modedit defaults -----------------------------------------------------------------------------------
 $settings->add(new admin_setting_heading('consultationmodeditdefaults', get_string('modeditdefaults', 'consultation'), get_string('modeditdefaultsexplain', 'consultation')));
 

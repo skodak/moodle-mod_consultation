@@ -24,6 +24,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+defined('MOODLE_INTERNAL') || die();
+
 $mod_consultation_capabilities = array(
 
     'mod/consultation:open' => array( // start consultation with somebody with mod/consultation:answer capability

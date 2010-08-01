@@ -38,10 +38,10 @@ $string['consultationwith'] = 'Dotázat se';
 $string['interrupt'] = 'Vstoupit do rozhovoru';
 $string['mailnewmessage'] = 'Automatické oznámení z {$a->site}, modul konzultace {$a->consultation}:
 Uživatel {$a->from} vznesl nový dotaz {$a->inquiry} {$a->url}.';
-$string['mailnewsubject'] = '{$a->course}: nový dotaz \"{$a->inquiry}\"';
+$string['mailnewsubject'] = '{$a->course}: nový dotaz "{$a->inquiry}"';
 $string['mailpostmessage'] = 'Automatické oznámení z {$a->site}, modul konzultace {$a->consultation}:
 Uživatel {$a->from} odpověděl v {$a->inquiry} {$a->url}.';
-$string['mailpostsubject'] = '{$a->course}: konzultace \"{$a->inquiry}\"';
+$string['mailpostsubject'] = '{$a->course}: konzultace "{$a->inquiry}"';
 $string['message'] = 'Text';
 $string['moddeleteafter'] = 'Odstranit uzavřené konzultace po';
 $string['moddeleteafterexplain'] = 'Odstranit uzavřené konzultace po ovedené době.';

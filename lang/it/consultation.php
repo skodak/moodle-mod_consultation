@@ -38,10 +38,10 @@ $string['consultationwith'] = 'Rivolgi richiesta a';
 $string['interrupt'] = 'Interrompi';
 $string['mailnewmessage'] = 'Notifica automatica dal sito {$a->site}, Modulo consultazione {$a->consultation}:
 L\'utente {$a->from} ha inserito la richiesta {$a->inquiry} {$a->url}.';
-$string['mailnewsubject'] = '{$a->course}: Nuova richiesta di consulto \"{$a->inquiry}\"';
+$string['mailnewsubject'] = '{$a->course}: Nuova richiesta di consulto "{$a->inquiry}"';
 $string['mailpostmessage'] = 'Notifica automatica dal sito {$a->site}, Modulo consultazione {$a->consultation}:
 L\'utente {$a->from} ha aggiornato la richiesta {$a->inquiry} {$a->url}.';
-$string['mailpostsubject'] = '{$a->course}: consultation inquiry \"{$a->inquiry}\"';
+$string['mailpostsubject'] = '{$a->course}: consultation inquiry "{$a->inquiry}"';
 $string['message'] = 'Messaggio';
 $string['moddeleteafter'] = 'Elimina richieste chiuse dopo';
 $string['moddeleteafterexplain'] = 'Elimina automaticamente le richieste chouse una volta trascorso il tempo impostato.';

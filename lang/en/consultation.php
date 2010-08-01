@@ -38,10 +38,10 @@ $string['consultationwith'] = 'Consult with';
 $string['interrupt'] = 'Interrupt';
 $string['mailnewmessage'] = 'Automatic notification from {$a->site}, consultation module {$a->consultation}:
 User {$a->from} posted new inquiry {$a->inquiry} {$a->url}.';
-$string['mailnewsubject'] = '{$a->course}: new consultation inquiry \"{$a->inquiry}\"';
+$string['mailnewsubject'] = '{$a->course}: new consultation inquiry "{$a->inquiry}"';
 $string['mailpostmessage'] = 'Automatic notification from {$a->site}, consultation module {$a->consultation}:
 User {$a->from} posted in inquiry {$a->inquiry} {$a->url}.';
-$string['mailpostsubject'] = '{$a->course}: consultation inquiry \"{$a->inquiry}\"';
+$string['mailpostsubject'] = '{$a->course}: consultation inquiry "{$a->inquiry}"';
 $string['message'] = 'Text';
 $string['moddeleteafter'] = 'Delete resolved inquiries after';
 $string['moddeleteafterexplain'] = 'Delete resolved inquiries after specified time.';

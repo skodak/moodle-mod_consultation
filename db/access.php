@@ -33,7 +33,7 @@ $mod_consultation_capabilities = array(
 
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
+        'archetype' => array(
             'student' => CAP_ALLOW,
         ),
     ),
@@ -42,7 +42,7 @@ $mod_consultation_capabilities = array(
     'mod/consultation:answer' => array( // override if you want student-to-student consultations
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
+        'archetype' => array(
             'teacher' => CAP_ALLOW,
             'editingteacher' => CAP_ALLOW,
         ),
@@ -53,7 +53,7 @@ $mod_consultation_capabilities = array(
 
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
+        'archetype' => array(
             'teacher' => CAP_ALLOW,
             'editingteacher' => CAP_ALLOW,
         ),
@@ -63,7 +63,7 @@ $mod_consultation_capabilities = array(
 
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
+        'archetype' => array(
             'student' => CAP_ALLOW,
             'teacher' => CAP_ALLOW,
             'editingteacher' => CAP_ALLOW,
@@ -74,7 +74,7 @@ $mod_consultation_capabilities = array(
 
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
+        'archetype' => array(
         ),
     ),
 
@@ -82,7 +82,7 @@ $mod_consultation_capabilities = array(
 
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
+        'archetype' => array(
         ),
     ),
 
@@ -90,7 +90,7 @@ $mod_consultation_capabilities = array(
 
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
+        'archetype' => array(
         ),
     ),
 
@@ -99,7 +99,7 @@ $mod_consultation_capabilities = array(
 
         'captype' => 'read',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
+        'archetype' => array(
         ),
         'clonepermissionsfrom' => 'mod/consultation:viewall'
     ),
@@ -109,7 +109,7 @@ $mod_consultation_capabilities = array(
 
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
+        'archetype' => array(
         ),
     ),
 
@@ -118,7 +118,7 @@ $mod_consultation_capabilities = array(
 
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
+        'archetype' => array(
         ),
     ),
 );

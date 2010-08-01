@@ -26,21 +26,26 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-function xmldb_consultation_upgrade($oldversion=0) {
-    global $CFG, $THEME, $db;
+function xmldb_consultation_upgrade($oldversion) {
+    global $CFG, $DB;
 
-    $result = true;
+    $dbman = $DB->get_manager();
 
-    if ($result && $oldversion < 2009080200) {
+    if ($oldversion < 2009080200) {
     /// Define field notify to be added to consultation
-        $table = new XMLDBTable('consultation');
-        $field = new XMLDBField('notify');
+        $table = new xmldb_table('consultation');
+        $field = new xmldb_field('notify');
         $field->setAttributes(XMLDB_TYPE_INTEGER, '4', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, null, null, '0', 'edittime');
 
     /// Launch add field notify
-        $result = $result && add_field($table, $field);
+        $dbman->add_field($table, $field);
+
+        upgrade_mod_savepoint(true, 2009080200, 'consultation');
     }
 
-    return $result;
+    // === 1.9.x upgrade line === //
+
+
+    return true;
 }
 

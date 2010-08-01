@@ -4,7 +4,7 @@
 //
 // Consultation is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
+// the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
 // Consultation is distributed in the hope that it will be useful,
@@ -18,9 +18,10 @@
 /**
  * Add and edit posts
  *
- * @package   mod-consultation
- * @copyright 2009 Petr Skoda (http://skodak.org)
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v2 or later
+ * @package    mod
+ * @subpackage consultation
+ * @copyright  2009 Petr Skoda {@link http://skodak.org}
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 require_once('../../config.php');
@@ -88,7 +89,7 @@ if ($post = $mform->get_data(false)) {
     // NOTE: user may double click or otherwise cancel this request
     // this is not acceptable, we have to finish it!
     ignore_user_abort(true);
-    
+
     if ($post->id) {
         $post->timemodified = time();
         $post->seenon       = 0;
@@ -111,7 +112,7 @@ if ($post = $mform->get_data(false)) {
         set_field('consultation_inquiries', 'timemodified', $post->timemodified, 'id', $inquiry->id);
 
         // note: do not resend notification here
-        
+
         // log actions
         add_to_log($course->id, 'consultation', 'participate inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
 
@@ -138,7 +139,7 @@ if ($post = $mform->get_data(false)) {
 
         // notify users if needed
         consultation_notify($post, false, $inquiry, $consultation, $cm, $course);
-        
+
         // log actions
         add_to_log($course->id, 'consultation', 'participate inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
     }

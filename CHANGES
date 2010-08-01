@@ -1,0 +1,195 @@
+2009-11-28 Saturday 23:35  skodak
+
+	* README.txt, version.php: 
+	
+	CONTRIB-1662 new consultation notification block
+
+2009-11-13 Friday 03:40  skodak
+
+	* lang/cs_utf8/consultation.php: 
+	
+	CONTRIB-1625 prvn’ n‡st?el p?ekladu, nehrozte se hrubek ;-)
+
+2009-11-13 Friday 03:31  skodak
+
+	* lang/cs_utf8/consultation.php: 
+	
+	CONTRIB-1625 prvn’ n‡st?el p?ekladu, nehrozte se hrubek ;-)
+
+2009-11-13 Friday 03:27  skodak
+
+	* lang/cs_utf8/: consultation.php, consultation.php: 
+	
+	CONTRIB-1625 prvn’ n‡st?el p?ekladu, nehrozte se hrubek ;-)
+
+2009-11-13 Friday 03:27  skodak
+
+	* lang/cs_utf8/consultation.php: 
+	
+	file consultation.php was initially added on branch
+	MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:03  skodak
+
+	* lang/: en_utf8/consultation.php, it_utf8/consultation.php: 
+	
+	file consultation.php was initially added on branch
+	MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:03  skodak
+
+	* db/upgrade.php: 
+	
+	file upgrade.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:03  skodak
+
+	* db/install.xml: 
+	
+	file install.xml was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:03  skodak
+
+	* lib.php: 
+	
+	file lib.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:03  skodak
+
+	* settingslib.php: 
+	
+	file settingslib.php was initially added on branch
+	MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:03  skodak
+
+	* post.php: 
+	
+	file post.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:03  skodak
+
+	* db/access.php: 
+	
+	file access.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:03  skodak
+
+	* index.php: 
+	
+	file index.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:03  skodak
+
+	* README.txt: 
+	
+	file README.txt was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:03  skodak
+
+	* post_form.php: 
+	
+	file post_form.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:03  skodak
+
+	* resolved.php: 
+	
+	file resolved.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* open.php: 
+	
+	file open.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* view.php: 
+	
+	file view.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* open_form.php: 
+	
+	file open_form.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* icon.gif: 
+	
+	file icon.gif was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* version.php: 
+	
+	file version.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* inquiry.php: 
+	
+	file inquiry.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* restorelib.php: 
+	
+	file restorelib.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* settings.php: 
+	
+	file settings.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* mod_form.php: 
+	
+	file mod_form.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* locallib.php: 
+	
+	file locallib.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* delete.php: 
+	
+	file delete.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* styles.php: 
+	
+	file styles.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* unread.php: 
+	
+	file unread.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* backuplib.php: 
+	
+	file backuplib.php was initially added on branch MOODLE_19_STABLE.
+
+2009-11-12 Thursday 07:02  skodak
+
+	* backuplib.php, styles.php, unread.php, delete.php, icon.gif,
+	inquiry.php, mod_form.php, open.php, open_form.php, restorelib.php,
+	settings.php, version.php, view.php, README.txt, index.php,
+	lib.php, locallib.php, post.php, post_form.php, resolved.php,
+	settingslib.php, db/access.php, db/install.xml, db/upgrade.php,
+	lang/en_utf8/consultation.php, lang/it_utf8/consultation.php: 
+	
+	CONTRIB-1624 import initial drop of Consultation 0.8beta into
+	contrib CVS
+

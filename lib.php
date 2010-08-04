@@ -35,9 +35,10 @@ defined('MOODLE_INTERNAL') || die();
  * @return mixed integer id if success, string if error
  */
 function consultation_add_instance($data) {
-    $data->timemodified = time();
+    global $DB;
 
-    return insert_record('consultation', $data);
+    $data->timemodified = time();
+    return $DB->insert_record('consultation', $data);
 }
 
 /**
@@ -48,10 +49,11 @@ function consultation_add_instance($data) {
  * @return bool success
  */
 function consultation_update_instance($data) {
+    global $DB;
+
     $data->timemodified = time();
     $data->id = $data->instance;
-
-    return update_record('consultation', $data);
+    return $DB->update_record('consultation', $data);
 }
 
 /**
@@ -62,32 +64,19 @@ function consultation_update_instance($data) {
  * @return bool success
  */
 function consultation_delete_instance($id) {
-    global $CFG;
-    require_once("$CFG->libdir/filelib.php");
+    global $DB;
 
-    if (!$consultation = get_record('consultation', 'id', $id)) {
+    if (!$consultation = $DB->get_record('consultation', array('id'=>$id))) {
         return false;
     }
 
-    $result = true;
+    $DB->delete_records_select('consultation_posts', "inquiryid IN (SELECT c.id
+                                                                      FROM {consultation_inquiries} c
+                                                                     WHERE c.consultationid = ?)", array($consultation->id));
+    $DB->delete_records('consultation_inquiries', array('consultationid'=>$consultation->id));
+    $DB->delete_records('consultation', array('id'=>$consultation->id));
 
-    if (!delete_records_select('consultation_posts', "inquiryid IN (SELECT c.id
-                                                                      FROM {$CFG->prefix}consultation_inquiries c
-                                                                     WHERE c.consultationid = $consultation->id)")) {
-        $result = false;
-    }
-
-    if (!delete_records('consultation_inquiries', 'consultationid', $consultation->id)) {
-        $result = false;
-    }
-
-    if (!delete_records('consultation', 'id', $consultation->id)) {
-        $result = false;
-    }
-
-    fulldelete("$CFG->dataroot/$consultation->course/$CFG->moddata/consultation/$consultation->id");
-
-    return $result;
+    return true;
 }
 
 
@@ -96,30 +85,29 @@ function consultation_delete_instance($id) {
  * @return bool success
  */
 function consultation_cron() {
-    global $CFG, $USER;
+    global $DB;
     require_once("$CFG->libdir/filelib.php");
 
     $now = time();
 
 /// delete old resolved consultations
     $sql = "SELECT ci.id, c.id AS cid, c.course
-              FROM {$CFG->prefix}consultation_inquiries ci
-              JOIN {$CFG->prefix}consultation c ON c.id = ci.consultationid
+              FROM {consultation_inquiries} ci
+              JOIN {consultation} c ON c.id = ci.consultationid
              WHERE ci.resolved = 1 AND c.deleteafter <> 0 AND ci.timemodified < $now - (c.deleteafter*60*60*24)";
-    $sqlempty = sql_empty();
 
-    if ($rs = get_recordset_sql($sql)) {
-        while ($inquiry = rs_fetch_next_record($rs)) {
-            if ($posts = get_records_select('consultation_posts', "inquiryid = $inquiry->id AND attachment = $sqlempty", 'id', 'id')) {
-                foreach ($posts as $post) {
-                    fulldelete("$CFG->dataroot/$inquiry->course/$CFG->moddata/consultation/$inquiry->cid/$post->id");
-                }
+    $fs = get_file_storage();
+    $rs = $DB->get_recordset_sql($sql);
+    foreach ($rs as $inquiry) {
+        //TODO: get context
+        $posts = $DB->get_records('consultation_posts', array('inquiryid' => $inquiry->id, 'attachment' => ''), 'id', 'id');
+            foreach ($posts as $post) {
+                //$fs->delete_area_files(); //TODO: add deleting of attachments
             }
-            delete_records('consultation_posts', 'inquiryid', $inquiry->id);
-            delete_records('consultation_inquiries', 'id', $inquiry->id);
-        }
-        rs_close($rs);
+        $DB->delete_records('consultation_posts', array('inquiryid'=>$inquiry->id));
+        $DB->delete_records('consultation_inquiries', array('id'=>$inquiry->id));
     }
+    $rs->close();
 
     return true;
 }
@@ -128,18 +116,18 @@ function consultation_cron() {
  * Returns the users with data in one consultation,
  * used from backup code.
  * @param int $consultationid
- * @return mixed array or false if none
+ * @return array
  */
 function consultation_get_participants($consultationid) {
-    global $CFG;
+    global $DB;
 
     $sql = "SELECT DISTINCT u.id, u.id
-              FROM {$CFG->prefix}user u,
-                   {$CFG->prefix}consultation_posts p
-              JOIN {$CFG->prefix}consultation_inquiries c ON (c.id = p.inquiryid AND c.consultationid = $consultationid)
+              FROM {user} u,
+                   {consultation_posts} p
+              JOIN {consultation_inquiries} c ON (c.id = p.inquiryid AND c.consultationid = ?)
              WHERE u.id = c.userfrom OR u.id = c.userto OR u.id = p.userid";
 
-    return get_records_sql($sql);
+    return $DB->get_records_sql($sql, array($consultationid));
 }
 
 
@@ -195,20 +183,21 @@ function consultation_get_extra_capabilities() {
  * @return array status array
  */
 function consultation_reset_userdata($data) {
-    global $CFG;
-    require_once($CFG->libdir.'/filelib.php');
+    global $DB;
 
-    $componentstr = get_string('modulenameplural', 'consultation');
+    $componentstr = get_string('modulenameplural', 'mod_consultation');
     $status = array();
 
+    $fs = get_file_storage();
+
     if (!empty($data->reset_consultation_all)) {
-        if ($consultations = get_records('consultation', 'course', $data->courseid)) {
+        if ($consultations = $DB->get_records('consultation', array('course'=>$data->courseid))) {
             foreach ($consultations as $consultationid=>$unused) {
-                delete_records_select('consultation_posts', "inquiryid IN (SELECT c.id
-                                                                             FROM {$CFG->prefix}consultation_inquiries c
-                                                                            WHERE c.consultationid = $consultationid)");
-                delete_records('consultation_inquiries', 'consultationid', $consultationid);
-                fulldelete("$CFG->dataroot/$data->courseid/$CFG->moddata/consultation/$consultationid");
+                $DB->delete_records_select('consultation_posts', "inquiryid IN (SELECT c.id
+                                                                                  FROM {$CFG->prefix}consultation_inquiries c
+                                                                                 WHERE c.consultationid = ?)", array($consultationid));
+                $DB->delete_records('consultation_inquiries', array('consultationid'=>$consultationid));
+                //$fs->delete_area_files(); TODO: add attachment delete
             }
         }
 
@@ -223,8 +212,8 @@ function consultation_reset_userdata($data) {
  * @param $mform form passed by reference
  */
 function consultation_reset_course_form_definition(&$mform) {
-    $mform->addElement('header', 'consultationheader', get_string('modulenameplural', 'consultation'));
-    $mform->addElement('checkbox', 'reset_consultation_all', get_string('resetconsultationsall', 'consultation'));
+    $mform->addElement('header', 'consultationheader', get_string('modulenameplural', 'mod_consultation'));
+    $mform->addElement('checkbox', 'reset_consultation_all', get_string('resetconsultationsall', 'mod_consultation'));
 }
 
 /**
@@ -243,17 +232,17 @@ function consultation_reset_course_form_defaults($course) {
  * @return bool success
  */
 function consultation_print_recent_activity($course, $viewfullnames, $timestart) {
-    global $CFG, $USER;
+    global $CFG, $USER, $DB, $OUTPUT;
 
     // do not use log table if possible, it may be huge and is expensive to join with other tables
 
     $sql = "SELECT DISTINCT ci.*
-              FROM {$CFG->prefix}consultation_inquiries ci
-              JOIN {$CFG->prefix}consultation c ON (c.id = ci.consultationid AND c.course = $course->id)
-             WHERE ci.timemodified > $timestart AND (ci.userfrom = $USER->id OR ci.userto = $USER->id)
+              FROM {consultation_inquiries} ci
+              JOIN {consultation} c ON (c.id = ci.consultationid AND c.course = :courseid)
+             WHERE ci.timemodified > :timestart AND (ci.userfrom = :userid2 OR ci.userto = :userid2)
           ORDER BY ci.timemodified ASC";
 
-    if (!$active_inquiries = get_records_sql($sql)) {
+    if (!$active_inquiries = $DB->get_records_sql($sql, array('timestart'=>$timestart, 'courseid'=>$course->id, 'userid1'=>$USER->id, 'userid2'=>$USER->id))) {
         return false;
     }
 
@@ -284,7 +273,7 @@ function consultation_print_recent_activity($course, $viewfullnames, $timestart)
     require_once("$CFG->dirroot/mod/consultation/locallib.php");
     $users = consultation_load_users($users);
 
-    print_headline(get_string('updatedinquiries', 'consultation').':', 3);
+    print_headline(get_string('updatedinquiries', 'consultation').':', 3); //TODO
     echo "\n<ul class='unlist'>\n";
 
     foreach ($active_inquiries as $inquiry) {
@@ -332,15 +321,15 @@ function consultation_user_outline($course, $user, $mod, $consultation) {
     }
 
     $sql = "SELECT COUNT(id) AS icount, MAX(timecreated) AS icreated
-              FROM {$CFG->prefix}consultation_inquiries
-             WHERE consultationid = $consultation->id AND userfrom = $user->id";
-    if (!$results = get_records_sql($sql)) {
+              FROM {consultation_inquiries}
+             WHERE consultationid = :cid AND userfrom = :userid";
+    if (!$results = $DB->get_records_sql($sql, array('cid'=>$consultation->id, 'userid'=>$user->id))) {
         return null;
     }
     $info = reset($results);
 
     $result = new object();
-    $result->info = get_string('numstartedinquiries', 'consultation', $info->icount);
+    $result->info = get_string('numstartedinquiries', 'mod_consultation', $info->icount);
     $result->time = $info->icreated;
     return $result;
 }
@@ -373,9 +362,9 @@ function consultation_user_complete($course, $user, $mod, $consultation) {
     }
 
     $sql = "SELECT *
-              FROM {$CFG->prefix}consultation_inquiries
-             WHERE consultationid = $consultation->id AND userfrom = $user->id";
-    if (!$inquiries = get_records_sql($sql)) {
+              FROM {consultation_inquiries}
+             WHERE consultationid = :cid AND userfrom = :userid";
+    if (!$inquiries = $DB->get_records_sql($sql, array('cid'=>$consultation->id, 'userid'=>$user->id))) {
         return;
     }
 

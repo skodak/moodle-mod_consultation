@@ -28,35 +28,21 @@ require('../../config.php');
 require_once('locallib.php');
 
 $id   = optional_param('id', PARAM_INT);
-$c    = optional_param('c', 0, PARAM_INT);         // consultation id
+$c    = optional_param('c', 0, PARAM_INT);           // consultation id
 $mode = optional_param('mode', 'my', PARAM_ALPHA);   // sub tab
 
 if ($c) {
-    if (!$consultation = get_record('consultation', 'id', $c)) {
-        error('Course module is incorrect');
-    }
+    $consultation = $DB->get_record('consultation', array('id'=>$c), '*', MUST_EXIST);
+    $course = $DB->get_record('course', array('id'=>$consultation->course), '*', MUST_EXIST);
+    $cm = get_coursemodule_from_instance('consultation', $consultation->id, $course->id, false, MUST_EXIST);
 
-    if (!$course = get_record('course', 'id', $consultation->course)) {
-        error('Course is misconfigured');
-    }
-
-    if (!$cm = get_coursemodule_from_instance('consultation', $consultation->id, $course->id)) {
-        error('Course Module ID was incorrect');
-    }
-
-} else { // $Id
-    if (!$cm = get_coursemodule_from_id('consultation', $id)) {
-        error('Course Module ID was incorrect');
-    }
-
-    if (!$course = get_record('course', 'id', $cm->course)) {
-        error('Course is misconfigured');
-    }
-
-    if (!$consultation = get_record('consultation', 'id', $cm->instance)) {
-        error('Course module is incorrect');
-    }
+} else { // id
+    $cm = get_coursemodule_from_id('consultation', $id, 0, false, MUST_EXIST);
+    $course = $DB->get_record('course', array('id'=>$cm->course), '*', MUST_EXIST);
+    $consultation = $DB->get_record('consultation', array('id'=>$cm->instance), '*', MUST_EXIST);
 }
+
+$PAGE->set_url('/mod/consultation/view.php', array('id' => $cm->id));
 
 require_login($course, false, $cm);
 consultation_no_guest_access($consultation, $cm, $course);
@@ -71,15 +57,19 @@ if (!in_array($mode, array('my', 'others')) or !has_capability('mod/consultation
 // log actions
 add_to_log($course->id, 'consultation', 'view', "view.php?id=$cm->id&mode=$mode", $consultation->id, $cm->id);
 
-$strconsultation  = get_string('modulename', 'consultation');
-$strconsultations = get_string('modulenameplural', 'consultation');
+$PAGE->set_title($course->shortname.': '.$consultation->name);
+$PAGE->set_heading($course->fullname);
+$PAGE->set_activity_record($consultation);
 
-$navigation = build_navigation('', $cm);
+$output = $PAGE->get_renderer('mod_folder');
 
-print_header_simple($consultation->name, '', $navigation, '', '', true,
-                    update_module_button($cm->id, $course->id, $strconsultation), navmenu($course, $cm));
+echo $output->header();
 
-print_box(format_text($consultation->intro, $consultation->introformat), 'generalbox consultationintro');
+if (trim(strip_tags($folder->intro))) {
+    echo $output->box_start('mod_introbox', 'pageintro');
+    echo format_module_intro('consultation', $consultation, $cm->id);
+    echo $output->box_end();
+}
 
 consultation_print_tabs('view', $mode, 0, $consultation, $cm, $course);
 
@@ -90,5 +80,5 @@ if ($mode === 'others') {
     consultation_print_my_inquiries('open', $consultation, $cm, $course, 'view.php', array('id'=>$cm->id, 'mode'=>$mode));
 }
 
-print_footer($course);
+echo $output->footer();
 

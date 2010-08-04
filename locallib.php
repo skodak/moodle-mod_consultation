@@ -37,7 +37,8 @@ require_once("$CFG->dirroot/mod/consultation/lib.php");
  * @return int
  */
 function consultation_count_started_inquiries($consultation, $userid) {
-    return count_records('consultation_inquiries', 'consultationid', $consultation->id, 'userfrom', $userid);
+    global $DB;
+    return $DB->count_records('consultation_inquiries', array('consultationid'=>$consultation->id, 'userfrom'=>$userid));
 }
 
 /**
@@ -46,6 +47,8 @@ function consultation_count_started_inquiries($consultation, $userid) {
  * @return array of object
  */
 function consultation_load_users($userids) {
+    global $DB;
+
     if (empty($userids)) {
         return array();
     }
@@ -53,7 +56,8 @@ function consultation_load_users($userids) {
     $chunks = array_chunk($userids, 50);
     $result = array();
     foreach ($chunks as $chunk) {
-        if ($users = get_records_select('user', 'id IN ('.implode(',', $userids).')', 'lastname, firstname', 'id, username, firstname, lastname, picture, imagealt, idnumber')) {
+        list($insql, $params) = $DB->get_in_or_equal($userids);
+        if ($users = $DB->get_records_select('user', "id $insql", $params, 'lastname, firstname', 'id, username, firstname, lastname, picture, imagealt, idnumber')) {
             if ($result) {
                 foreach ($users as $key=>$user) {
                     $result[$key] = $user;
@@ -76,26 +80,24 @@ function consultation_load_users($userids) {
  * @return array (count, array of inquiries)
  */
 function consultation_get_others_open_inquiries($consultation, $userid, $page, $perpage, $orderby) {
-    global $CFG;
+    global $DB;
 
     $sql = "SELECT COUNT('x')
-              FROM {$CFG->prefix}consultation_inquiries c
-              JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-              JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-             WHERE c.consultationid = $consultation->id AND c.resolved = 0 AND uf.id <> $userid AND ut.id <> $userid";
-    if (!$inquirycount = count_records_sql($sql)) {
+              FROM {consultation_inquiries} c
+              JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+              JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+             WHERE c.consultationid = :cid AND c.resolved = 0 AND uf.id <> :u1 AND ut.id <> :u2";
+    if (!$inquirycount = $DB->count_records_sql($sql, array('cid'=>$consultation->id, 'u1'=>$userid, 'u2'=>$userid))) {
         return array(0, array());
     }
     $sql = "SELECT c.id, c.userfrom, c.userto, c.subject, c.resolved, c.timecreated, c.timemodified,
-                   (SELECT COUNT('x') FROM {$CFG->prefix}consultation_posts e2 WHERE e2.inquiryid = c.id) AS total
-              FROM {$CFG->prefix}consultation_inquiries c
-              JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-              JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-             WHERE c.consultationid = $consultation->id AND c.resolved = 0 AND uf.id <> $userid AND ut.id <> $userid
+                   (SELECT COUNT('x') FROM {consultation_posts} e2 WHERE e2.inquiryid = c.id) AS total
+              FROM {consultation_inquiries} c
+              JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+              JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+             WHERE c.consultationid = :cid AND c.resolved = 0 AND uf.id <> :u1 AND ut.id <> :u2
           ORDER BY $orderby";
-    if (!$inquiries = get_records_sql($sql, $page*$perpage, $perpage)) {
-        $inquiries = array();
-    }
+    $inquiries = $DB->get_records_sql($sql, array('cid'=>$consultation->id, 'u1'=>$userid, 'u2'=>$userid), $page*$perpage, $perpage);
     return array($inquirycount, $inquiries);
 }
 
@@ -109,26 +111,24 @@ function consultation_get_others_open_inquiries($consultation, $userid, $page, $
  * @return array (count, array of inquiries)
  */
 function consultation_get_others_resolved_inquiries($consultation, $userid, $page, $perpage, $orderby) {
-    global $CFG;
+    global $DB;
 
     $sql = "SELECT COUNT('x')
-              FROM {$CFG->prefix}consultation_inquiries c
-              JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-              JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-             WHERE c.consultationid = $consultation->id AND c.resolved = 1 AND uf.id <> $userid AND ut.id <> $userid";
-    if (!$inquirycount = count_records_sql($sql)) {
+              FROM {consultation_inquiries} c
+              JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+              JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+             WHERE c.consultationid = :cid AND c.resolved = 1 AND uf.id <> :u1 AND ut.id <> :u2";
+    if (!$inquirycount = $DB->count_records_sql($sql, array('cid'=>$consultation->id, 'u1'=>$userid, 'u2'=>$userid))) {
         return array(0, array());
     }
     $sql = "SELECT c.id, c.userfrom, c.userto, c.subject, c.resolved, c.timecreated, c.timemodified,
-                   (SELECT COUNT('x') FROM {$CFG->prefix}consultation_posts e2 WHERE e2.inquiryid = c.id) AS total
-              FROM {$CFG->prefix}consultation_inquiries c
-              JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-              JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-             WHERE c.consultationid = $consultation->id AND c.resolved = 1 AND uf.id <> $userid AND ut.id <> $userid
+                   (SELECT COUNT('x') FROM {consultation_posts} e2 WHERE e2.inquiryid = c.id) AS total
+              FROM {consultation_inquiries} c
+              JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+              JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+             WHERE c.consultationid = :cid AND c.resolved = 1 AND uf.id <> :u1 AND ut.id <> :u2
           ORDER BY $orderby";
-    if (!$inquiries = get_records_sql($sql, $page*$perpage, $perpage)) {
-        $inquiries = array();
-    }
+    $inquiries = $DB->get_records_sql($sql, array('cid'=>$consultation->id, 'u1'=>$userid, 'u2'=>$userid), $page*$perpage, $perpage);
     return array($inquirycount, $inquiries);
 }
 
@@ -142,32 +142,29 @@ function consultation_get_others_resolved_inquiries($consultation, $userid, $pag
  * @return array (count, array of inquiries)
  */
 function consultation_get_my_open_inquiries($consultation, $userid, $page, $perpage, $orderby) {
-    global $CFG;
+    global $DB;
 
     $sql = "SELECT COUNT('x')
-              FROM {$CFG->prefix}consultation_inquiries c
-              JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-              JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-             WHERE c.consultationid = $consultation->id AND c.resolved = 0 AND (uf.id = $userid OR ut.id = $userid)";
-    if (!$inquirycount = count_records_sql($sql)) {
+              FROM {consultation_inquiries} c
+              JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+              JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+             WHERE c.consultationid = :cid AND c.resolved = 0 AND (uf.id = :u1 OR ut.id = :u2)";
+    if (!$inquirycount = $DB->count_records_sql($sql, array('cid'=>$consultation->id, 'u1'=>$userid, 'u2'=>$userid))) {
         return array(0, array());
     }
+    $userid = (int)$userid; //TODO: no idea if WHEN supports bound params
     $sql = "SELECT c.id, c.userwith, c.subject, c.resolved, c.timecreated, c.timemodified,
-                   (SELECT COUNT('x') FROM {$CFG->prefix}consultation_posts e1 WHERE e1.inquiryid = c.id AND e1.seenon IS NULL AND userid <> $userid) AS unread,
-                   (SELECT COUNT('x') FROM {$CFG->prefix}consultation_posts e2 WHERE e2.inquiryid = c.id) AS total
+                   (SELECT COUNT('x') FROM {consultation_posts} e1 WHERE e1.inquiryid = c.id AND e1.seenon IS NULL AND userid <> :u0) AS unread,
+                   (SELECT COUNT('x') FROM {consultation_posts} e2 WHERE e2.inquiryid = c.id) AS total
               FROM (SELECT cx.*, CASE cx.userfrom WHEN $userid THEN cx.userto ELSE cx.userfrom END AS userwith
-                     FROM {$CFG->prefix}consultation_inquiries cx
-                     JOIN {$CFG->prefix}user uf ON (uf.id = cx.userfrom AND uf.deleted = 0)
-                     JOIN {$CFG->prefix}user ut ON (ut.id = cx.userto AND ut.deleted = 0)
-                    WHERE cx.consultationid = $consultation->id AND cx.resolved = 0 AND (uf.id = $userid OR ut.id = $userid)
+                     FROM {consultation_inquiries} cx
+                     JOIN {user} uf ON (uf.id = cx.userfrom AND uf.deleted = 0)
+                     JOIN {user} ut ON (ut.id = cx.userto AND ut.deleted = 0)
+                    WHERE cx.consultationid = :cid AND cx.resolved = 0 AND (uf.id = :u1 OR ut.id = :u2)
                    ) c
-              JOIN {$CFG->prefix}user u ON (u.id = c.userwith)
+              JOIN {user} u ON (u.id = c.userwith)
           ORDER BY $orderby";
-    $inquiries = get_records_sql($sql, $page*$perpage, $perpage);
-
-    if (!$inquiries) {
-        $inquiries = array();
-    }
+    $inquiries = $DB->get_records_sql($sql, array('cid'=>$consultation->id, 'u0'=>$userid, 'u1'=>$userid, 'u2'=>$userid), $page*$perpage, $perpage);
     return array($inquirycount, $inquiries);
 }
 
@@ -181,38 +178,35 @@ function consultation_get_my_open_inquiries($consultation, $userid, $page, $perp
  * @return array (count, array of inquiries)
  */
 function consultation_get_my_unread_inquiries($consultation, $userid, $page, $perpage, $orderby) {
-    global $CFG;
+    global $DB;
 
     $sql = "SELECT COUNT('x')
-              FROM {$CFG->prefix}consultation_inquiries c
-              JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-              JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-             WHERE c.consultationid = $consultation->id AND (uf.id = $userid OR ut.id = $userid)
+              FROM {consultation_inquiries} c
+              JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+              JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+             WHERE c.consultationid = :cid AND (uf.id = :u0 OR ut.id = :u1)
                    AND EXISTS(SELECT 'x'
-                                FROM {$CFG->prefix}consultation_posts e3
-                               WHERE e3.inquiryid = c.id AND e3.seenon IS NULL AND e3.userid <> $userid)";
-    if (!$inquirycount = count_records_sql($sql)) {
+                                FROM {consultation_posts} e3
+                               WHERE e3.inquiryid = c.id AND e3.seenon IS NULL AND e3.userid <> :u2)";
+    if (!$inquirycount = $DB->count_records_sql($sql, array('cid'=>$consultation->id, 'u0'=>$userid, 'u1'=>$userid, 'u2'=>$userid))) {
         return array(0, array());
     }
+    $userid = (int)$userid; //TODO: no idea if WHEN supports bound params
     $sql = "SELECT c.id, c.userwith, c.subject, c.resolved, c.timecreated, c.timemodified,
-                   (SELECT COUNT('x') FROM {$CFG->prefix}consultation_posts e1 WHERE e1.inquiryid = c.id AND e1.seenon IS NULL AND e1.userid <> $userid) AS unread,
-                   (SELECT COUNT('x') FROM {$CFG->prefix}consultation_posts e2 WHERE e2.inquiryid = c.id) AS total
+                   (SELECT COUNT('x') FROM {consultation_posts} e1 WHERE e1.inquiryid = c.id AND e1.seenon IS NULL AND e1.userid <> :u0) AS unread,
+                   (SELECT COUNT('x') FROM {consultation_posts} e2 WHERE e2.inquiryid = c.id) AS total
               FROM (SELECT cx.*, CASE cx.userfrom WHEN $userid THEN cx.userto ELSE cx.userfrom END AS userwith
-                     FROM {$CFG->prefix}consultation_inquiries cx
-                     JOIN {$CFG->prefix}user uf ON (uf.id = cx.userfrom AND uf.deleted = 0)
-                     JOIN {$CFG->prefix}user ut ON (ut.id = cx.userto AND ut.deleted = 0)
-                    WHERE cx.consultationid = $consultation->id AND (uf.id = $userid OR ut.id = $userid)
+                     FROM {consultation_inquiries} cx
+                     JOIN {user} uf ON (uf.id = cx.userfrom AND uf.deleted = 0)
+                     JOIN {user} ut ON (ut.id = cx.userto AND ut.deleted = 0)
+                    WHERE cx.consultationid = :cid AND (uf.id = $userid OR ut.id = :u1)
                            AND EXISTS(SELECT 'x'
-                                        FROM {$CFG->prefix}consultation_posts e3
-                                       WHERE e3.inquiryid = cx.id AND e3.seenon IS NULL AND e3.userid <> $userid)
+                                        FROM {consultation_posts} e3
+                                       WHERE e3.inquiryid = cx.id AND e3.seenon IS NULL AND e3.userid <> :u2)
                     ) c
-               JOIN {$CFG->prefix}user u ON (u.id = c.userwith)
+               JOIN {user} u ON (u.id = c.userwith)
            ORDER BY $orderby";
-    $inquiries = get_records_sql($sql, $page*$perpage, $perpage);
-
-    if (!$inquiries) {
-        $inquiries = array();
-    }
+    $inquiries = $DB->get_records_sql($sql, array('cid'=>$consultation->id, 'u0'=>$userid, 'u1'=>$userid, 'u2'=>$userid), $page*$perpage, $perpage);
     return array($inquirycount, $inquiries);
 }
 
@@ -226,32 +220,29 @@ function consultation_get_my_unread_inquiries($consultation, $userid, $page, $pe
  * @return array (count, array of inquiries)
  */
 function consultation_get_my_resolved_inquiries($consultation, $userid, $page, $perpage, $orderby) {
-    global $CFG;
+    global $DB;
 
     $sql = "SELECT COUNT('x')
-              FROM {$CFG->prefix}consultation_inquiries c
-              JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-              JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-             WHERE c.consultationid = $consultation->id AND c.resolved = 1 AND (uf.id = $userid OR ut.id = $userid)";
-    if (!$inquirycount = count_records_sql($sql)) {
+              FROM {consultation_inquiries} c
+              JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+              JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+             WHERE c.consultationid = :cid AND c.resolved = 1 AND (uf.id = :u1 OR ut.id = :u2)";
+    if (!$inquirycount = $DB->count_records_sql($sql, array('cid'=>$consultation->id, 'u1'=>$userid, 'u2'=>$userid))) {
         return array(0, array());
     }
+    $userid = (int)$userid; //TODO: no idea if WHEN supports bound params
     $sql = "SELECT c.id, c.userwith, c.subject, c.resolved, c.timecreated, c.timemodified,
-                   (SELECT COUNT('x') FROM {$CFG->prefix}consultation_posts e1 WHERE e1.inquiryid = c.id AND e1.seenon IS NULL AND userid <> $userid) AS unread,
-                   (SELECT COUNT('x') FROM {$CFG->prefix}consultation_posts e2 WHERE e2.inquiryid = c.id) AS total
+                   (SELECT COUNT('x') FROM {consultation_posts} e1 WHERE e1.inquiryid = c.id AND e1.seenon IS NULL AND userid <> :u0) AS unread,
+                   (SELECT COUNT('x') FROM {consultation_posts} e2 WHERE e2.inquiryid = c.id) AS total
               FROM (SELECT cx.*, CASE cx.userfrom WHEN $userid THEN cx.userto ELSE cx.userfrom END AS userwith
-                     FROM {$CFG->prefix}consultation_inquiries cx
-                     JOIN {$CFG->prefix}user uf ON (uf.id = cx.userfrom AND uf.deleted = 0)
-                     JOIN {$CFG->prefix}user ut ON (ut.id = cx.userto AND ut.deleted = 0)
-                    WHERE cx.consultationid = $consultation->id AND cx.resolved = 1 AND (uf.id = $userid OR ut.id = $userid)
+                     FROM {consultation_inquiries} cx
+                     JOIN {user} uf ON (uf.id = cx.userfrom AND uf.deleted = 0)
+                     JOIN {user} ut ON (ut.id = cx.userto AND ut.deleted = 0)
+                    WHERE cx.consultationid = :cid AND cx.resolved = 1 AND (uf.id = :u1 OR ut.id = :u2)
                    ) c
-              JOIN {$CFG->prefix}user u ON (u.id = c.userwith)
+              JOIN {user} u ON (u.id = c.userwith)
           ORDER BY $orderby";
-    $inquiries = get_records_sql($sql, $page*$perpage, $perpage);
-
-    if (!$inquiries) {
-        $inquiries = array();
-    }
+    $inquiries = $DB->get_records_sql($sql, array('cid'=>$consultation->id, 'u0'=>$userid, 'u1'=>$userid, 'u2'=>$userid), $page*$perpage, $perpage);
     return array($inquirycount, $inquiries);
 }
 
@@ -265,59 +256,59 @@ function consultation_get_my_resolved_inquiries($consultation, $userid, $page, $
  * @return object with counts
  */
 function consultation_get_counts($userid, $consultationid, $others=false, $ignoreunreadin=0) {
-    global $CFG;
+    global $DB;
 
     $counts = new object();
 
     // my resolved consultations
     $sql = "SELECT COUNT('x')
-              FROM {$CFG->prefix}consultation_inquiries c
-              JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-              JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-             WHERE c.consultationid = $consultationid AND c.resolved = 1 AND (uf.id = $userid OR ut.id = $userid)";
-    $counts->myresolved = count_records_sql($sql);
+              FROM {consultation_inquiries} c
+              JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+              JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+             WHERE c.consultationid = :cid AND c.resolved = 1 AND (uf.id = :u1 OR ut.id = :u2)";
+    $counts->myresolved = $DB->count_records_sql($sql, array('cid'=>$consultationid, 'u1'=>$userid, 'u2'=>$userid));
 
     // my open consultations
     $sql = "SELECT COUNT('x')
-              FROM {$CFG->prefix}consultation_inquiries c
-              JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-              JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-             WHERE c.consultationid = $consultationid AND c.resolved = 0 AND (uf.id = $userid OR ut.id = $userid)";
-    $counts->myopen = count_records_sql($sql);
+              FROM {consultation_inquiries} c
+              JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+              JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+             WHERE c.consultationid = :cid AND c.resolved = 0 AND (uf.id = :u1 OR ut.id = :u2)";
+    $counts->myopen = $DB->count_records_sql($sql, array('cid'=>$consultationid, 'u1'=>$userid, 'u2'=>$userid));
 
     // my unread posts - open and resolved
     $sql = "SELECT COUNT('x')
-              FROM {$CFG->prefix}consultation_inquiries c
-              JOIN {$CFG->prefix}consultation_posts e ON (e.inquiryid = c.id)
-              JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-              JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-             WHERE c.consultationid = $consultationid AND (uf.id = $userid OR ut.id = $userid)
-                   AND e.userid <> $userid AND e.seenon IS NULL";
+              FROM {consultation_inquiries} c
+              JOIN {consultation_posts} e ON (e.inquiryid = c.id)
+              JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+              JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+             WHERE c.consultationid = :cid AND (uf.id = :u1 OR ut.id = :u2)
+                   AND e.userid <> :u0 AND e.seenon IS NULL";
     if ($ignoreunreadin) {
         // this is a special case for printing of inquiries,
         // the seenon flag is set immediately after display
-        $sql = "$sql AND c.id <> $ignoreunreadin";
+        $sql = "$sql AND c.id <> :ignoreunreadin";
     }
-    $counts->myunread = count_records_sql($sql);
+    $counts->myunread = $DB->count_records_sql($sql, array('cid'=>$consultationid, 'u0'=>$userid, 'u1'=>$userid, 'u2'=>$userid, 'ignoreunreadin'=>$ignoreunreadin));
 
     $counts->othersresolved = null;
     $counts->othersopen = null;
     if ($others) {
         // resolved consultations of others
         $sql = "SELECT COUNT('x')
-                  FROM {$CFG->prefix}consultation_inquiries c
-                  JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-                  JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-                 WHERE c.consultationid = $consultationid AND c.resolved = 1 AND uf.id <> $userid AND ut.id <> $userid";
-        $counts->othersresolved = count_records_sql($sql);
+                  FROM {consultation_inquiries} c
+                  JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+                  JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+                 WHERE c.consultationid = :cid AND c.resolved = 1 AND uf.id <> :u1 AND ut.id <> :u2";
+        $counts->othersresolved = $DB->count_records_sql($sql, array('cid'=>$consultationid, 'u1'=>$userid, 'u2'=>$userid));
 
         // open consultations of others
         $sql = "SELECT COUNT('x')
-                  FROM {$CFG->prefix}consultation_inquiries c
-                  JOIN {$CFG->prefix}user uf ON (uf.id = c.userfrom AND uf.deleted = 0)
-                  JOIN {$CFG->prefix}user ut ON (ut.id = c.userto AND ut.deleted = 0)
-                 WHERE c.consultationid = $consultationid AND c.resolved = 0 AND uf.id <> $userid AND ut.id <> $userid";
-        $counts->othersopen = count_records_sql($sql);
+                  FROM {consultation_inquiries} c
+                  JOIN {user} uf ON (uf.id = c.userfrom AND uf.deleted = 0)
+                  JOIN {user} ut ON (ut.id = c.userto AND ut.deleted = 0)
+                 WHERE c.consultationid = :cid AND c.resolved = 0 AND uf.id <> :u1 AND ut.id <> :u2";
+        $counts->othersopen = $DB->count_records_sql($sql, array('cid'=>$consultationid, 'u1'=>$userid, 'u2'=>$userid));
     }
 
     return $counts;
@@ -334,6 +325,8 @@ function consultation_get_counts($userid, $consultationid, $others=false, $ignor
  * @return array (array(userid=>username), array(userid=>username))
  */
 function consultation_get_candidates($user, $groupid, $consultation, $cm, $course) {
+    global $DB;
+
     $context = get_context_instance(CONTEXT_MODULE, $cm->id);
     $caviewfull = has_capability('moodle/site:viewfullnames', $context, $user->id);
     $openany    = has_capability('mod/consultation:openany', $context, $user->id);
@@ -346,14 +339,12 @@ function consultation_get_candidates($user, $groupid, $consultation, $cm, $cours
     }
 
     if ($openany) {
-        if (!$candidates = get_users_by_capability($context, 'moodle/course:view', 'u.id,u.lastname,u.firstname',
-                                                  'u.lastname ASC, u.firstname ASC', '', '', $groupid, '', false, true, false)) {
+        if (!$candidates = get_enrolled_users($context, '', $groupid, 'u.id,u.lastname,u.firstname', 'u.lastname ASC, u.firstname ASC')) {
             return array(array(), array());
         }
 
     } else {
-        if (!$candidates = get_users_by_capability($context, 'mod/consultation:answer', 'u.id,u.lastname,u.firstname',
-                                                  'u.lastname ASC, u.firstname ASC', '', '', $groupid, '', false, true, false)) {
+        if (!$candidates = get_enrolled_users($context, 'mod/consultation:answer', $groupid, 'u.id,u.lastname,u.firstname', 'u.lastname ASC, u.firstname ASC')) {
             return array(array(), array());
         }
     }
@@ -372,9 +363,9 @@ function consultation_get_candidates($user, $groupid, $consultation, $cm, $cours
 
     $candidates_existing = array();
 /// now exclude already open and also multiple if not allowed
-    if ($existing = get_records_select("consultation_inquiries",
-                                       "consultationid = $consultation->id  AND (userfrom = $user->id OR userto = $user->id)",
-                                       '', 'id,userfrom,userto')) {
+    if ($existing = $DB->get_records_select('consultation_inquiries',
+                                            "consultationid = :cid  AND (userfrom = :u1 OR userto = :u2)", array('cid'=>$consultation->id, 'u1'=>$userid, 'u2'=>$userid),
+                                            '', 'id,userfrom,userto')) {
         foreach ($existing as $conv) {
             if ($conv->userto == $user->id) {
                 $uid = $conv->userfrom;
@@ -420,21 +411,21 @@ function consultation_print_tabs($currenttab, $mode, $ignoreunreadin, $consultat
 
     $row = array();
     if (has_capability('mod/consultation:open', $context) or has_capability('mod/consultation:openany', $context)) {
-        $row[] = new tabobject('open', "open.php?id=$cm->id", get_string('tabopen', 'consultation'));
+        $row[] = new tabobject('open', "open.php?id=$cm->id", get_string('tabopen', 'mod_consultation'));
     }
     if ($counts->myunread) {
-        $row[] = new tabobject('unread', "unread.php?id=$cm->id", get_string('tabunread', 'consultation', $counts->myunread));
+        $row[] = new tabobject('unread', "unread.php?id=$cm->id", get_string('tabunread', 'mod_consultation', $counts->myunread));
     }
     if ($viewall) {
-        $row[] = new tabobject('view', "view.php?id=$cm->id", get_string('tabview', 'consultation'));
+        $row[] = new tabobject('view', "view.php?id=$cm->id", get_string('tabview', 'mod_consultation'));
     } else {
-        $row[] = new tabobject('view', "view.php?id=$cm->id", get_string('tabviewany', 'consultation', $counts->myopen));
+        $row[] = new tabobject('view', "view.php?id=$cm->id", get_string('tabviewany', 'mod_consultation', $counts->myopen));
     }
     if ($counts->myresolved or $counts->othersresolved or $currenttab === 'resolved') {
         if ($viewall) {
-            $row[] = new tabobject('resolved', "resolved.php?id=$cm->id", get_string('tabresolved', 'consultation'));
+            $row[] = new tabobject('resolved', "resolved.php?id=$cm->id", get_string('tabresolved', 'mod_consultation'));
         } else {
-            $row[] = new tabobject('resolved', "resolved.php?id=$cm->id", get_string('tabresolvedany', 'consultation', $counts->myresolved));
+            $row[] = new tabobject('resolved', "resolved.php?id=$cm->id", get_string('tabresolvedany', 'mod_consultation', $counts->myresolved));
         }
     }
 
@@ -442,16 +433,16 @@ function consultation_print_tabs($currenttab, $mode, $ignoreunreadin, $consultat
 
     if ($viewall and $currenttab === 'view') {
         $row = array();
-        $row[] = new tabobject('viewmy', "view.php?id=$cm->id&mode=my", get_string('subtabviewmy', 'consultation', $counts->myopen));
-        $row[] = new tabobject('viewothers', "view.php?id=$cm->id&mode=others", get_string('subtabviewothers', 'consultation', $counts->othersopen));
+        $row[] = new tabobject('viewmy', "view.php?id=$cm->id&mode=my", get_string('subtabviewmy', 'mod_consultation', $counts->myopen));
+        $row[] = new tabobject('viewothers', "view.php?id=$cm->id&mode=others", get_string('subtabviewothers', 'mod_consultation', $counts->othersopen));
         $tabs[] = $row;
         $activetwo = array('view'.$mode);
     }
 
     if ($viewall and $currenttab === 'resolved') {
         $row = array();
-        $row[] = new tabobject('resolvedmy', "resolved.php?id=$cm->id&mode=my", get_string('subtabresolvedmy', 'consultation', $counts->myresolved));
-        $row[] = new tabobject('resolvedothers', "resolved.php?id=$cm->id&mode=others", get_string('subtabresolvedothers', 'consultation', $counts->othersresolved));
+        $row[] = new tabobject('resolvedmy', "resolved.php?id=$cm->id&mode=my", get_string('subtabresolvedmy', 'mod_consultation', $counts->myresolved));
+        $row[] = new tabobject('resolvedothers', "resolved.php?id=$cm->id&mode=others", get_string('subtabresolvedothers', 'mod_consultation', $counts->othersresolved));
         $tabs[] = $row;
         $activetwo = array('resolved'.$mode);
     }
@@ -471,7 +462,7 @@ function consultation_print_tabs($currenttab, $mode, $ignoreunreadin, $consultat
  * @return void
  */
 function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $baseurl, $urlparams, $fullview=true) {
-    global $CFG, $USER;
+    global $CFG, $USER, $DB;
 
     $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 
@@ -482,7 +473,7 @@ function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $base
     $caninterrupt = ($USER->id != $inquiry->userfrom and $USER->id != $inquiry->userto and has_capability('mod/consultation:interrupt', $context));
     $canreply     = (($USER->id == $inquiry->userfrom or $USER->id == $inquiry->userto) and !$inquiry->resolved);
 
-    $posts     = get_records('consultation_posts', 'inquiryid', $inquiry->id, 'timecreated');
+    $posts     = $DB->get_records('consultation_posts', array('inquiryid'=>$inquiry->id), 'timecreated');
     $firstpost = reset($posts);
     $count     = count($posts);
 
@@ -496,7 +487,7 @@ function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $base
     $userfrom = $users[$inquiry->userfrom];
     $userto   = $users[$inquiry->userto];
 
-    $strme = get_string('fromme', 'consultation');
+    $strme = get_string('fromme', 'mod_consultation');
 
     if ($inquiry->userfrom == $USER->id) {
         $a = new object();
@@ -533,7 +524,7 @@ function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $base
     }
 
     echo '<table cellspacing="0" class="consultationinquiry generaltable boxaligncenter">';
-    echo '<tr><th class="usercolumn header c0">'.get_string('user').'</th><th class="messagecolumn header c1">'.get_string('message', 'consultation').'</th></tr>';
+    echo '<tr><th class="usercolumn header c0">'.get_string('user').'</th><th class="messagecolumn header c1">'.get_string('message', 'mod_consultation').'</th></tr>';
 
     foreach ($posts as $post) {
         echo '<tr class="r0">';
@@ -572,7 +563,7 @@ function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $base
 
         if ($fullview) {
             if ($post->userid == $USER->id and $consultation->edittime and $post->timecreated + ($consultation->edittime * 60) > time()) {
-                $untilwarning = get_string('untilwarning', 'consultation', userdate($post->timecreated + ($consultation->edittime * 60)));
+                $untilwarning = get_string('untilwarning', 'mod_consultation', userdate($post->timecreated + ($consultation->edittime * 60)));
                 $commands[] = '<a href="post.php?inquiryid='.$inquiry->id.'&amp;id='.$post->id.'">'.get_string('edit').'</a>';
             } else if ($candeleteany) {
                 if ($count == 1 or $post->id != $firstpost->id) {
@@ -599,7 +590,7 @@ function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $base
         if ($inquiry->resolved) {
             if ($canreopen) {
                 echo '<div class="actionbuttons">';
-                print_single_button('inquiry.php', array('id'=>$inquiry->id, 'action'=>'reopen'), get_string('reopeninquiry', 'consultation'));
+                print_single_button('inquiry.php', array('id'=>$inquiry->id, 'action'=>'reopen'), get_string('reopeninquiry', 'mod_consultation'));
                 echo '</div>';
             }
         } else {
@@ -607,10 +598,10 @@ function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $base
             print_single_button('inquiry.php', array('id'=>$inquiry->id), get_string('refresh', 'consultation'));
 
             if ($canresolve) {
-                print_single_button('inquiry.php', array('id'=>$inquiry->id, 'action'=>'resolve'), get_string('resolveinquiry', 'consultation'));
+                print_single_button('inquiry.php', array('id'=>$inquiry->id, 'action'=>'resolve'), get_string('resolveinquiry', 'mod_consultation'));
             }
             if ($caninterrupt) {
-                print_single_button('post.php', array('inquiryid'=>$inquiry->id), get_string('interrupt', 'consultation'));
+                print_single_button('post.php', array('inquiryid'=>$inquiry->id), get_string('interrupt', 'mod_consultation'));
             }
             if ($canreply) {
                 require_once('post_form.php');
@@ -918,7 +909,7 @@ function consultation_mark_inquiry_read($inquiry, $consultation, $cm, $course) {
 
     $timenow = time();
 
-    $sql = "UPDATE {$CFG->prefix}consultation_posts
+    $sql = "UPDATE {consultation_posts}
                SET seenon = $timenow
              WHERE inquiryid = $inquiry->id AND userid <> $USER->id AND seenon IS NULL";
     execute_sql($sql, false);

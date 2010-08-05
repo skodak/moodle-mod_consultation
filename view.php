@@ -45,6 +45,11 @@ if ($c) {
 $PAGE->set_url('/mod/consultation/view.php', array('id' => $cm->id));
 
 require_login($course, false, $cm);
+
+$PAGE->set_title($course->shortname.': '.$consultation->name);
+$PAGE->set_heading($course->fullname);
+$PAGE->set_activity_record($consultation);
+
 consultation_no_guest_access($consultation, $cm, $course);
 
 $context = get_context_instance(CONTEXT_MODULE, $cm->id);
@@ -56,10 +61,6 @@ if (!in_array($mode, array('my', 'others')) or !has_capability('mod/consultation
 
 // log actions
 add_to_log($course->id, 'consultation', 'view', "view.php?id=$cm->id&mode=$mode", $consultation->id, $cm->id);
-
-$PAGE->set_title($course->shortname.': '.$consultation->name);
-$PAGE->set_heading($course->fullname);
-$PAGE->set_activity_record($consultation);
 
 $output = $PAGE->get_renderer('mod_folder');
 

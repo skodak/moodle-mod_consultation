@@ -29,19 +29,18 @@ require_once('locallib.php');
 
 $id = required_param('id', PARAM_INT);
 
-if (!$cm = get_coursemodule_from_id('consultation', $id)) {
-    error('Course Module ID was incorrect');
-}
+$cm = get_coursemodule_from_id('consultation', $id, 0, false, MUST_EXIST);
+$course = $DB->get_record('course', array('id'=>$cm->course), '*', MUST_EXIST);
+$consultation = $DB->get_record('consultation', array('id'=>$cm->instance), '*', MUST_EXIST);
 
-if (!$course = get_record('course', 'id', $cm->course)) {
-    error('Course is misconfigured');
-}
-
-if (!$consultation = get_record('consultation', 'id', $cm->instance)) {
-    error('Course module is incorrect');
-}
+$PAGE->set_url('/mod/consultation/unread.php', array('id' => $cm->id));
 
 require_login($course, false, $cm);
+
+$PAGE->set_title($course->shortname.': '.$consultation->name);
+$PAGE->set_heading($course->fullname);
+$PAGE->set_activity_record($consultation);
+
 consultation_no_guest_access($consultation, $cm, $course);
 
 $context = get_context_instance(CONTEXT_MODULE, $cm->id);
@@ -49,19 +48,18 @@ $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 // log actions
 add_to_log($course->id, 'consultation', 'view', "unread.php?id=$cm->id", $consultation->id, $cm->id);
 
-$strconsultation  = get_string('modulename', 'consultation');
-$strconsultations = get_string('modulenameplural', 'consultation');
+$strconsultation  = get_string('modulename', 'mod_consultation');
+$strconsultations = get_string('modulenameplural', 'mod_consultation');
 
 $navigation = build_navigation('', $cm);
 
-print_header_simple($consultation->name, '', $navigation, '', '', true,
-                    update_module_button($cm->id, $course->id, $strconsultation), navmenu($course, $cm));
+echo $OUTPUT->header();
 
-print_box(format_text($consultation->intro, $consultation->introformat), 'generalbox consultationintro');
+echo $OUTPUT->box(format_text($consultation->intro, $consultation->introformat), 'generalbox consultationintro');
 
 consultation_print_tabs('unread', '', 0, $consultation, $cm, $course);
 
 consultation_print_my_inquiries('unread', $consultation, $cm, $course, 'unread.php', array('id'=>$cm->id));
 
-print_footer($course);
+echo $OUTPUT->footer();
 

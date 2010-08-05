@@ -273,7 +273,7 @@ function consultation_print_recent_activity($course, $viewfullnames, $timestart)
     require_once("$CFG->dirroot/mod/consultation/locallib.php");
     $users = consultation_load_users($users);
 
-    print_headline(get_string('updatedinquiries', 'consultation').':', 3); //TODO
+    print_headline(get_string('updatedinquiries', 'mod_consultation').':', 3); //TODO
     echo "\n<ul class='unlist'>\n";
 
     foreach ($active_inquiries as $inquiry) {

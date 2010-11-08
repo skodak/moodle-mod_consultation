@@ -30,25 +30,24 @@ require_once('locallib.php');
 
 $id = required_param('id', PARAM_INT);
 
-if (!$course = get_record('course', 'id', $id)) {
-    error('Course ID is incorrect');
-}
+$course = $DB->get_record('course', array('id'=>$id), '*', MUST_EXIST);
 
 require_login($course);
 add_to_log($course->id, 'consultation', 'view all', "index.php?id=$course->id", '');
 
-$strconsultation        = get_string('modulename', 'consultation');
-$strconsultations       = get_string('modulenameplural', 'consultation');
-$strname          = get_string('name');
-$stropenconsultations   = get_string('openconsultations', 'consultation');
+$strconsultation          = get_string('modulename', 'consultation');
+$strconsultations         = get_string('modulenameplural', 'consultation');
+$strname                  = get_string('name');
+$stropenconsultations     = get_string('openconsultations', 'consultation');
 $strresolvedconsultations = get_string('resolvedconsultations', 'consultation');
 
-$navlinks = array(array('name' => $strconsultations, 'link' => '', 'type' => 'activity' ));
-$navigation = build_navigation($navlinks);
+$PAGE->set_url('/mod/consultation/index.php', array('id' => $course->id));
+$PAGE->set_title($course->shortname.': '.$strconsultations);
+$PAGE->set_heading($course->fullname);
+$PAGE->navbar->add($strconsultations);
+echo $OUTPUT->header();
 
-print_header_simple($strconsultations, '', $navigation,  '', '', true, '', navmenu($course));
-
-$consultations = get_records('consultation', 'course', $course->id);
+$consultations = $DB->get_records('consultation', array('course'=>$course->id));
 
 $table = new object();
 $table->head  = array ($strname, $stropenconsultations, $strresolvedconsultations);
@@ -83,10 +82,9 @@ foreach ($modinfo->instances['consultation'] as $consultationid=>$cm) {
 }
 
 echo '<br />';
+
 if (!empty($table->data)) {
-    print_table($table);
-} else {
-    notice('There are no consultations', "../../course/view.php?id=$course->id");
+    echo html_writer::table($table);
 }
 
-print_footer($course);
+echo $OUTPUT->footer();

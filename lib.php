@@ -86,7 +86,6 @@ function consultation_delete_instance($id) {
  */
 function consultation_cron() {
     global $DB;
-    require_once("$CFG->libdir/filelib.php");
 
     $now = time();
 
@@ -194,7 +193,7 @@ function consultation_reset_userdata($data) {
         if ($consultations = $DB->get_records('consultation', array('course'=>$data->courseid))) {
             foreach ($consultations as $consultationid=>$unused) {
                 $DB->delete_records_select('consultation_posts', "inquiryid IN (SELECT c.id
-                                                                                  FROM {$CFG->prefix}consultation_inquiries c
+                                                                                  FROM {consultation_inquiries} c
                                                                                  WHERE c.consultationid = ?)", array($consultationid));
                 $DB->delete_records('consultation_inquiries', array('consultationid'=>$consultationid));
                 //$fs->delete_area_files(); TODO: add attachment delete
@@ -239,14 +238,14 @@ function consultation_print_recent_activity($course, $viewfullnames, $timestart)
     $sql = "SELECT DISTINCT ci.*
               FROM {consultation_inquiries} ci
               JOIN {consultation} c ON (c.id = ci.consultationid AND c.course = :courseid)
-             WHERE ci.timemodified > :timestart AND (ci.userfrom = :userid2 OR ci.userto = :userid2)
+             WHERE ci.timemodified > :timestart AND (ci.userfrom = :userid1 OR ci.userto = :userid2)
           ORDER BY ci.timemodified ASC";
 
     if (!$active_inquiries = $DB->get_records_sql($sql, array('timestart'=>$timestart, 'courseid'=>$course->id, 'userid1'=>$USER->id, 'userid2'=>$USER->id))) {
         return false;
     }
 
-    $modinfo =& get_fast_modinfo($course);
+    $modinfo = get_fast_modinfo($course);
 
     $strftimerecent = get_string('strftimerecent');
     $users = array($USER->id=>$USER->id);
@@ -273,7 +272,7 @@ function consultation_print_recent_activity($course, $viewfullnames, $timestart)
     require_once("$CFG->dirroot/mod/consultation/locallib.php");
     $users = consultation_load_users($users);
 
-    print_headline(get_string('updatedinquiries', 'mod_consultation').':', 3); //TODO
+    echo $OUTPUT->heading(get_string('updatedinquiries', 'mod_consultation').':');
     echo "\n<ul class='unlist'>\n";
 
     foreach ($active_inquiries as $inquiry) {
@@ -304,9 +303,9 @@ function consultation_print_recent_activity($course, $viewfullnames, $timestart)
  * @return object A standard object with 2 variables: info (number of posts for this user) and time (last modified)
  */
 function consultation_user_outline($course, $user, $mod, $consultation) {
-    global $CFG, $USER;
+    global $CFG, $USER, $DB;
 
-    $modinfo =& get_fast_modinfo($course);
+    $modinfo = get_fast_modinfo($course);
     if (!isset($modinfo->instances['consultation'][$consultation->id])) {
         return;
     }
@@ -344,10 +343,10 @@ function consultation_user_outline($course, $user, $mod, $consultation) {
  * @return void
  */
 function consultation_user_complete($course, $user, $mod, $consultation) {
-    global $CFG, $USER;
+    global $CFG, $USER, $DB;
     require_once("$CFG->dirroot/mod/consultation/locallib.php");
 
-    $modinfo =& get_fast_modinfo($course);
+    $modinfo = get_fast_modinfo($course);
     if (!isset($modinfo->instances['consultation'][$consultation->id])) {
         return;
     }
@@ -383,5 +382,22 @@ function consultation_user_complete($course, $user, $mod, $consultation) {
  */
 function consultation_print_overview($courses, &$htmlarray) {
     //TODO: My Moodle support
+}
+
+/**
+ * Indicates API features that the forum supports.
+ * @param string $feature
+ * @return mixed True if yes (some features may use other values)
+ */
+function consultation_supports($feature) {
+    switch($feature) {
+        case FEATURE_GROUPS:                  return true;
+        case FEATURE_GROUPINGS:               return true;
+        case FEATURE_GROUPMEMBERSONLY:        return true;
+        case FEATURE_MOD_INTRO:               return true;
+        case FEATURE_BACKUP_MOODLE2:          return false; //TODO
+
+        default: return null;
+    }
 }
 

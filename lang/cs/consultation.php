@@ -87,6 +87,7 @@ $string['noinquiries'] = 'Žádné dotazy.';
 $string['numstartedinquiries'] = '{$a} dotazy';
 $string['openconsultation'] = 'Nový dotaz';
 $string['openconsultations'] = 'Otevřené dotazy';
+$string['pluginname'] = 'Konzultace';
 $string['refresh'] = 'Obnovit';
 $string['reopeninquiry'] = 'Znovuotevřít';
 $string['resetconsultationsall'] = 'Odstranit všechny dotazy';

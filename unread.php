@@ -29,8 +29,8 @@ require_once('locallib.php');
 
 $id = required_param('id', PARAM_INT);
 
-$cm = get_coursemodule_from_id('consultation', $id, 0, false, MUST_EXIST);
-$course = $DB->get_record('course', array('id'=>$cm->course), '*', MUST_EXIST);
+$cm           = get_coursemodule_from_id('consultation', $id, 0, false, MUST_EXIST);
+$course       = $DB->get_record('course', array('id'=>$cm->course), '*', MUST_EXIST);
 $consultation = $DB->get_record('consultation', array('id'=>$cm->instance), '*', MUST_EXIST);
 
 $PAGE->set_url('/mod/consultation/unread.php', array('id' => $cm->id));
@@ -48,18 +48,19 @@ $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 // log actions
 add_to_log($course->id, 'consultation', 'view', "unread.php?id=$cm->id", $consultation->id, $cm->id);
 
-$strconsultation  = get_string('modulename', 'mod_consultation');
-$strconsultations = get_string('modulenameplural', 'mod_consultation');
+$output = $PAGE->get_renderer('mod_consultation');
 
-$navigation = build_navigation('', $cm);
+echo $output->header();
 
-echo $OUTPUT->header();
+if (trim(strip_tags($consultation->intro))) {
+    echo $output->box_start('mod_introbox');
+    echo format_module_intro('consultation', $consultation, $cm->id);
+    echo $output->box_end();
+}
 
-echo $OUTPUT->box(format_text($consultation->intro, $consultation->introformat), 'generalbox consultationintro');
-
-consultation_print_tabs('unread', '', 0, $consultation, $cm, $course);
+echo $output->consultation_tabs('unread', '', 0, $consultation, $cm, $course);
 
 consultation_print_my_inquiries('unread', $consultation, $cm, $course, 'unread.php', array('id'=>$cm->id));
 
-echo $OUTPUT->footer();
+echo $output->footer();
 

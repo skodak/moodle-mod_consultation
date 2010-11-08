@@ -26,7 +26,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$mod_consultation_capabilities = array(
+$capabilities = array(
 
     'mod/consultation:open' => array( // start consultation with somebody with mod/consultation:answer capability
         'riskbitmask' => RISK_SPAM,

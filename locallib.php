@@ -56,8 +56,8 @@ function consultation_load_users($userids) {
     $chunks = array_chunk($userids, 50);
     $result = array();
     foreach ($chunks as $chunk) {
-        list($insql, $params) = $DB->get_in_or_equal($userids);
-        if ($users = $DB->get_records_select('user', "id $insql", $params, 'lastname, firstname', 'id, username, firstname, lastname, picture, imagealt, idnumber')) {
+        list($insql, $params) = $DB->get_in_or_equal($chunk);
+        if ($users = $DB->get_records_select('user', "id $insql", $params, 'lastname, firstname', 'id, username, firstname, lastname, picture, imagealt, idnumber, email')) {
             if ($result) {
                 foreach ($users as $key=>$user) {
                     $result[$key] = $user;
@@ -364,7 +364,7 @@ function consultation_get_candidates($user, $groupid, $consultation, $cm, $cours
     $candidates_existing = array();
 /// now exclude already open and also multiple if not allowed
     if ($existing = $DB->get_records_select('consultation_inquiries',
-                                            "consultationid = :cid  AND (userfrom = :u1 OR userto = :u2)", array('cid'=>$consultation->id, 'u1'=>$userid, 'u2'=>$userid),
+                                            "consultationid = :cid  AND (userfrom = :u1 OR userto = :u2)", array('cid'=>$consultation->id, 'u1'=>$user->id, 'u2'=>$user->id),
                                             '', 'id,userfrom,userto')) {
         foreach ($existing as $conv) {
             if ($conv->userto == $user->id) {
@@ -388,69 +388,6 @@ function consultation_get_candidates($user, $groupid, $consultation, $cm, $cours
 // OTHER CONSULTATION FUNCTIONS ///////////////////////////////////////////////////////////////////
 
 /**
- * Print tabs
- * @param string $currenttab
- * @param string $mode
- * @param int $ignoreunreadin
- * @param object $consultation
- * @param object $cm
- * @param object $course
- * @return void
- */
-function consultation_print_tabs($currenttab, $mode, $ignoreunreadin, $consultation, $cm, $course) {
-    global $USER;
-
-    $tabs = array();
-
-    $context = get_context_instance(CONTEXT_MODULE, $cm->id);
-    $viewall = has_capability('mod/consultation:viewany', $context);
-
-    $counts = consultation_get_counts($USER->id, $consultation->id, $viewall, $ignoreunreadin);
-
-    $activetwo = null;
-
-    $row = array();
-    if (has_capability('mod/consultation:open', $context) or has_capability('mod/consultation:openany', $context)) {
-        $row[] = new tabobject('open', "open.php?id=$cm->id", get_string('tabopen', 'mod_consultation'));
-    }
-    if ($counts->myunread) {
-        $row[] = new tabobject('unread', "unread.php?id=$cm->id", get_string('tabunread', 'mod_consultation', $counts->myunread));
-    }
-    if ($viewall) {
-        $row[] = new tabobject('view', "view.php?id=$cm->id", get_string('tabview', 'mod_consultation'));
-    } else {
-        $row[] = new tabobject('view', "view.php?id=$cm->id", get_string('tabviewany', 'mod_consultation', $counts->myopen));
-    }
-    if ($counts->myresolved or $counts->othersresolved or $currenttab === 'resolved') {
-        if ($viewall) {
-            $row[] = new tabobject('resolved', "resolved.php?id=$cm->id", get_string('tabresolved', 'mod_consultation'));
-        } else {
-            $row[] = new tabobject('resolved', "resolved.php?id=$cm->id", get_string('tabresolvedany', 'mod_consultation', $counts->myresolved));
-        }
-    }
-
-    $tabs[] = $row;
-
-    if ($viewall and $currenttab === 'view') {
-        $row = array();
-        $row[] = new tabobject('viewmy', "view.php?id=$cm->id&mode=my", get_string('subtabviewmy', 'mod_consultation', $counts->myopen));
-        $row[] = new tabobject('viewothers', "view.php?id=$cm->id&mode=others", get_string('subtabviewothers', 'mod_consultation', $counts->othersopen));
-        $tabs[] = $row;
-        $activetwo = array('view'.$mode);
-    }
-
-    if ($viewall and $currenttab === 'resolved') {
-        $row = array();
-        $row[] = new tabobject('resolvedmy', "resolved.php?id=$cm->id&mode=my", get_string('subtabresolvedmy', 'mod_consultation', $counts->myresolved));
-        $row[] = new tabobject('resolvedothers', "resolved.php?id=$cm->id&mode=others", get_string('subtabresolvedothers', 'mod_consultation', $counts->othersresolved));
-        $tabs[] = $row;
-        $activetwo = array('resolved'.$mode);
-    }
-
-    print_tabs($tabs, $currenttab, $activetwo);
-}
-
-/**
  * Print one inquiry
  * @param object $inquiry
  * @param object $consultation
@@ -462,7 +399,7 @@ function consultation_print_tabs($currenttab, $mode, $ignoreunreadin, $consultat
  * @return void
  */
 function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $baseurl, $urlparams, $fullview=true) {
-    global $CFG, $USER, $DB;
+    global $CFG, $USER, $DB, $OUTPUT;
 
     $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 
@@ -494,9 +431,9 @@ function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $base
         $a->subject  = format_string($inquiry->subject);
         $a->fullname = '<a href="'.$CFG->wwwroot.'/user/view.php?id='.$inquiry->userto.'&amp;course='.$course->id.'">'.fullname($users[$inquiry->userto]).'</a>';
 
-        print_heading(get_string('fullsubjectfromme', 'mod_consultation', $a), '', 2);
+        echo $OUTPUT->heading(get_string('fullsubjectfromme', 'mod_consultation', $a), 2);
         echo '<div class="participants">';
-        print_user_picture($inquiry->userto, $course->id, NULL, 100);
+        echo $OUTPUT->user_picture($userto, array('courseid'=>$course->id, 'size'=>100));
         echo '</div>';
 
     } else if ($inquiry->userto == $USER->id) {
@@ -504,9 +441,9 @@ function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $base
         $a->subject  = format_string($inquiry->subject);
         $a->fullname = '<a href="'.$CFG->wwwroot.'/user/view.php?id='.$inquiry->userfrom.'&amp;course='.$course->id.'">'.fullname($users[$inquiry->userfrom]).'</a>';
 
-        print_heading(get_string('fullsubjecttome', 'mod_consultation', $a), '', 2);
+        echo $OUTPUT->heading(get_string('fullsubjecttome', 'mod_consultation', $a), 2);
         echo '<div class="participants">';
-        print_user_picture($users[$inquiry->userfrom], $course->id, NULL, 100);
+        echo $OUTPUT->user_picture($userfrom, array('courseid'=>$course->id, 'size'=>100));
         echo '</div>';
 
     } else {
@@ -515,11 +452,11 @@ function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $base
         $a->fromname = '<a href="'.$CFG->wwwroot.'/user/view.php?id='.$userfrom->id.'&amp;course='.$course->id.'">'.fullname($userfrom).'</a>';
         $a->toname   = '<a href="'.$CFG->wwwroot.'/user/view.php?id='.$userto->id.'&amp;course='.$course->id.'">'.fullname($userto).'</a>';
 
-        print_heading(get_string('fullsubjectothers', 'mod_consultation', $a), '', 2);
+        echo $OUTPUT->heading(get_string('fullsubjectothers', 'mod_consultation', $a), 2);
 
         echo '<div class="participants">';
-        print_user_picture($userfrom, $course->id, NULL, 100);
-        print_user_picture($userto, $course->id, NULL, 100);
+        echo $OUTPUT->user_picture($userto, array('courseid'=>$course->id, 'size'=>100));
+        echo $OUTPUT->user_picture($userfrom, array('courseid'=>$course->id, 'size'=>100));
         echo '</div>';
     }
 
@@ -590,18 +527,18 @@ function consultation_print_inquiry($inquiry, $consultation, $cm, $course, $base
         if ($inquiry->resolved) {
             if ($canreopen) {
                 echo '<div class="actionbuttons">';
-                print_single_button('inquiry.php', array('id'=>$inquiry->id, 'action'=>'reopen'), get_string('reopeninquiry', 'mod_consultation'));
+                echo $OUTPUT->single_button(new moodle_url('/mod/consultation/inquiry.php', array('id'=>$inquiry->id, 'action'=>'reopen')), get_string('reopeninquiry', 'mod_consultation'));
                 echo '</div>';
             }
         } else {
             echo '<div class="actionbuttons">';
-            print_single_button('inquiry.php', array('id'=>$inquiry->id), get_string('refresh', 'mod_consultation'));
+            echo $OUTPUT->single_button(new moodle_url('/mod/consultation/inquiry.php', array('id'=>$inquiry->id)), get_string('refresh', 'mod_consultation'));
 
             if ($canresolve) {
-                print_single_button('inquiry.php', array('id'=>$inquiry->id, 'action'=>'resolve'), get_string('resolveinquiry', 'mod_consultation'));
+                echo $OUTPUT->single_button(new moodle_url('/mod/consultation/inquiry.php', array('id'=>$inquiry->id, 'action'=>'resolve')), get_string('resolveinquiry', 'mod_consultation'));
             }
             if ($caninterrupt) {
-                print_single_button('post.php', array('inquiryid'=>$inquiry->id), get_string('interrupt', 'mod_consultation'));
+                echo $OUTPUT->single_button(new moodle_url('/mod/consultation/post.php', array('inquiryid'=>$inquiry->id)), get_string('interrupt', 'mod_consultation'));
             }
             if ($canreply) {
                 require_once('post_form.php');
@@ -653,7 +590,7 @@ function consultation_print_my_inquiries($type, $consultation, $cm, $course, $ba
     }
 
     if (!$inquirycount) {
-        notify(get_string('noinquiries', 'mod_consultation'));
+        echo $OUTPUT->notification(get_string('noinquiries', 'mod_consultation'));
         return;
     }
 
@@ -665,7 +602,8 @@ function consultation_print_my_inquiries($type, $consultation, $cm, $course, $ba
     $sorturl   = "$url&amp;page=$page&amp;perpage=$perpage&amp;";
 
     if ($inquirycount > $perpage) {
-        print_paging_bar($inquirycount, $page, $perpage, $pagingurl);
+        $pagingbar = new paging_bar($inquirycount, $page, $perpage, $pagingurl, 'page');
+        echo $OUTPUT->render($pagingbar);
     }
 
     $columns = array();
@@ -693,7 +631,7 @@ function consultation_print_my_inquiries($type, $consultation, $cm, $course, $ba
             } else {
                 $columnicon = ($dir == 'ASC') ? 'down' : 'up';
             }
-            $columnicon = ' <img src="'.$OUTPUT->pix_url('f/'.$columnicon).'" class="icon" alt="" />';
+            $columnicon = ' <img src="'.$OUTPUT->pix_url('t/'.$columnicon).'" class="smallicon" alt="" />';
         }
         $columns[$column] = "<a href=\"{$sorturl}sort=$column&amp;dir=$columndir\">".$string."</a>$columnicon";
     }
@@ -711,7 +649,7 @@ function consultation_print_my_inquiries($type, $consultation, $cm, $course, $ba
         $line = array();
         $userid = $inquiry->userwith;
         $fullname = '<a href="'.$CFG->wwwroot.'/user/view.php?id='.$userid.'&amp;course='.$course->id.'">'.fullname($users[$userid], $caviewfull).'</a>';
-        $picture  = print_user_picture($users[$userid], $course->id, null, 0, true);
+        $picture  = $OUTPUT->user_picture($users[$userid], array('courseid'=>$course->id));
         $line[] = "$picture $fullname";
         $line[] = "<a href=\"$CFG->wwwroot/mod/consultation/inquiry.php?id=$inquiry->id\">".format_string($inquiry->subject).'</a>';
         $line[] = userdate($inquiry->timecreated);
@@ -724,17 +662,18 @@ function consultation_print_my_inquiries($type, $consultation, $cm, $course, $ba
 
         $data[] = $line;
     }
-    $table = new object();
+    $table = new html_table();
     $table->head  = $columns;
     $table->size  = array('20%', '30%', '20%', '20%', '10%');
     $table->align = array('left', 'left', 'left', 'left', 'left', 'center');
     $table->width = '95%';
     $table->data  = $data;
 
-    print_table($table);
+    echo html_writer::table($table);
 
     if ($inquirycount > $perpage) {
-        print_paging_bar($inquirycount, $page, $perpage, $pagingurl);
+        $pagingbar = new paging_bar($inquirycount, $page, $perpage, $pagingurl, 'page');
+        echo $OUTPUT->render($pagingbar);
     }
 }
 
@@ -749,7 +688,7 @@ function consultation_print_my_inquiries($type, $consultation, $cm, $course, $ba
  * @return void
  */
 function consultation_print_others_inquiries($type, $consultation, $cm, $course, $baseurl, $urlparams) {
-    global $CFG, $USER;
+    global $CFG, $USER, $OUTPUT;
 
     $context = get_context_instance(CONTEXT_MODULE, $cm->id);
     $caviewfull = has_capability('moodle/site:viewfullnames', $context);
@@ -776,7 +715,7 @@ function consultation_print_others_inquiries($type, $consultation, $cm, $course,
     }
 
     if (!$inquirycount) {
-        notify(get_string('noinquiries', 'mod_consultation'));
+        echo $OUTPUT->notification(get_string('noinquiries', 'mod_consultation'));
         return;
     }
 
@@ -788,7 +727,8 @@ function consultation_print_others_inquiries($type, $consultation, $cm, $course,
     $sorturl   = "$url&amp;page=$page&amp;perpage=$perpage&amp;";
 
     if ($inquirycount > $perpage) {
-        print_paging_bar($inquirycount, $page, $perpage, $pagingurl);
+        $pagingbar = new paging_bar($inquirycount, $page, $perpage, $pagingurl, 'page');
+        echo $OUTPUT->render($pagingbar);
     }
 
     $columns = array();
@@ -813,7 +753,7 @@ function consultation_print_others_inquiries($type, $consultation, $cm, $course,
             } else {
                 $columnicon = ($dir == 'ASC') ? 'down' : 'up';
             }
-            $columnicon = ' <img src="'.$OUTPUT->pix_url('f/'.$columnicon).'" class="icon" alt="" />';
+            $columnicon = ' <img src="'.$OUTPUT->pix_url('t/'.$columnicon).'" class="smallicon" alt="" />';
         }
         $columns[$column] = "<a href=\"{$sorturl}sort=$column&amp;dir=$columndir\">".$string."</a>$columnicon";
     }
@@ -830,10 +770,10 @@ function consultation_print_others_inquiries($type, $consultation, $cm, $course,
     foreach ($inquiries as $inquiry) {
         $line = array();
         $fullname = '<a href="'.$CFG->wwwroot.'/user/view.php?id='.$inquiry->userfrom.'&amp;course='.$course->id.'">'.fullname($users[$inquiry->userfrom], $caviewfull).'</a>';
-        $picture  = print_user_picture($users[$inquiry->userfrom], $course->id, null, 0, true);
+        $picture  = $OUTPUT->user_picture($users[$inquiry->userfrom], array('courseid'=>$course->id));
         $line[] = "$picture $fullname";
         $fullname = '<a href="'.$CFG->wwwroot.'/user/view.php?id='.$inquiry->userto.'&amp;course='.$course->id.'">'.fullname($users[$inquiry->userto], $caviewfull).'</a>';
-        $picture  = print_user_picture($users[$inquiry->userto], $course->id, null, 0, true);
+        $picture  = $OUTPUT->user_picture($users[$inquiry->userto], array('courseid'=>$course->id));
         $line[] = "$picture $fullname";
         $line[] = "<a href=\"$CFG->wwwroot/mod/consultation/inquiry.php?id=$inquiry->id\">".format_string($inquiry->subject).'</a>';
         $line[] = userdate($inquiry->timecreated);
@@ -841,17 +781,18 @@ function consultation_print_others_inquiries($type, $consultation, $cm, $course,
 
         $data[] = $line;
     }
-    $table = new object();
+    $table = new html_table();
     $table->head  = $columns;
     $table->size  = array('20%', '20%', '30%', '15%', '15%');
     $table->align = array('left', 'left', 'left', 'left', 'left');
     $table->width = '95%';
     $table->data  = $data;
 
-    print_table($table);
+    echo html_writer::table($table);
 
     if ($inquirycount > $perpage) {
-        print_paging_bar($inquirycount, $page, $perpage, $pagingurl);
+        $pagingbar = new paging_bar($inquirycount, $page, $perpage, $pagingurl, 'page');
+        echo $OUTPUT->render($pagingbar);
     }
 }
 
@@ -868,10 +809,9 @@ function consultation_print_attachment($post, $inquiry, $cm, $consultation, $cou
     global $CFG, $OUTPUT;
     require_once($CFG->dirroot.'/lib/filelib.php');
 
-    if (empty($post->attachment)) {
-        return;
-    }
+    return;
 
+    //TODO: print attachments
     $output = '';
 
     $file = $post->attachment;
@@ -881,12 +821,7 @@ function consultation_print_attachment($post, $inquiry, $cm, $consultation, $cou
 
     $image = '<img src="'.$OUTPUT->pix_url('f/'.$icon).'" class="icon" alt="" />'; //TODO: fix icon
 
-    if (in_array($type, array('image/gif', 'image/jpeg', 'image/png'))) {    // Image attachments don't get printed as links
-        echo "<br /><img src=\"$ffurl\" alt=\"\" />";
-    } else {
-        echo "<a href=\"$ffurl\">$image</a> ";
-        echo filter_text("<a href=\"$ffurl\">$file</a><br />");
-    }
+    echo "<br /><img src=\"$ffurl\" alt=\"\" />";
 }
 
 /**
@@ -910,20 +845,7 @@ function consultation_mark_inquiry_read($inquiry, $consultation, $cm, $course) {
     $sql = "UPDATE {consultation_posts}
                SET seenon = :timenow
              WHERE inquiryid = :iid AND userid <> :uid AND seenon IS NULL";
-    $DB->execute_sql($sql, array('timenow'=>$timenow, 'uid'=>$USER->id, 'iid'=>$inquiry->id));
-}
-
-/**
- * Returns path to moddata directory for the post
- *
- * @param $post
- * @param $consultation
- * @return string path to dir
- */
-function consultation_get_moddata_post_dir($post, $consultation) {
-    global $CFG;
-
-    return "$consultation->course/$CFG->moddata/consultation/$consultation->id/$post->id"; //TODO:
+    $DB->execute($sql, array('timenow'=>$timenow, 'uid'=>$USER->id, 'iid'=>$inquiry->id));
 }
 
 /**
@@ -935,19 +857,16 @@ function consultation_get_moddata_post_dir($post, $consultation) {
  * @return void
  */
 function consultation_no_guest_access($consultation, $cm, $course) {
-    global $CFG, $OUTPUT;
+    global $CFG, $OUTPUT, $USER;
 
     $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 
     if (!isloggedin() or isguestuser()) {
         echo $OUTPUT->header();
 
-        $loginroot = $CFG->wwwroot.'/login/index.php';
-        if (!empty($CFG->loginhttps)) {
-            $loginroot = str_replace('http:','https:', $loginroot);
-        }
+        $loginroot = get_login_url();
 
-        notice_yesno(get_string('noguests', 'mod_consultation').'<br /><br />'.get_string('liketologin'),
+        echo $OUTPUT->confirm(get_string('noguests', 'mod_consultation').'<br /><br />'.get_string('liketologin'),
                 $loginroot, $CFG->wwwroot.'/course/view.php?id='.$course->id);
 
         echo $OUTPUT->footer();
@@ -960,7 +879,7 @@ function consultation_no_guest_access($consultation, $cm, $course) {
         // temporary guest course access
         echo $OUTPUT->header();
 
-        notice_yesno(get_string('noguests', 'mod_consultation').'<br /><br />'.get_string('enrolme', '', format_string($course->shortname)),
+        echo $OUTPUT->confirm(get_string('noguests', 'mod_consultation').'<br /><br />'.get_string('enrolme', '', format_string($course->shortname)),
             $CFG->wwwroot.'/course/enrol/index.php?id='.$course->id, $CFG->wwwroot.'/course/view.php?id='.$course->id);
 
         echo $OUTPUT->footer();
@@ -996,7 +915,6 @@ function consultation_notify($post, $newinquiry, $inquiry, $consultation, $cm, $
     $a->site         = $SITE->shortname;
     $a->url          = "$CFG->wwwroot/mod/consultation/inquiry.php?id=$inquiry->id";
 
-    $from = $USER;
     if ($newinquiry) {
         $subject = get_string('mailnewsubject', 'mod_consultation', $a);
         $message = get_string('mailnewmessage', 'mod_consultation', $a);

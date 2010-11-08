@@ -31,34 +31,27 @@ require_once($CFG->libdir.'/filelib.php');
 $id      = required_param('id', PARAM_INT);
 $confirm = optional_param('confirm', 0, PARAM_BOOL);
 
-if (!$post = get_record('consultation_posts', 'id', $id)) {
-    error('Post id is incorrect');
-}
+$post         = $DB->get_record('consultation_posts', array('id'=>$id), '*', MUST_EXIST);
+$inquiry      = $DB->get_record('consultation_inquiries', array('id'=>$post->inquiryid), '*', MUST_EXIST);
+$consultation = $DB->get_record('consultation', array('id'=>$inquiry->consultationid), '*', MUST_EXIST);
+$course       = $DB->get_record('course', array('id'=>$consultation->course), '*', MUST_EXIST);
+$cm           = get_coursemodule_from_instance('consultation', $consultation->id, $course->id, false, MUST_EXIST);
 
-if (!$inquiry = get_record('consultation_inquiries', 'id', $post->inquiryid)) {
-    error('Inquiry id is incorrect');
-}
-
-if (!$consultation = get_record('consultation', 'id', $inquiry->consultationid)) {
-    error('Course module is incorrect');
-}
-
-if (!$course = get_record('course', 'id', $consultation->course)) {
-    error('Course is misconfigured');
-}
-
-if (!$cm = get_coursemodule_from_instance('consultation', $consultation->id, $course->id)) {
-    error('Course Module ID was incorrect');
-}
+$PAGE->set_url('/mod/consultation/delete.php', array('id' => $cm->id));
 
 require_login($course, false, $cm);
+
+$PAGE->set_title($course->shortname.': '.$consultation->name);
+$PAGE->set_heading($course->fullname);
+$PAGE->set_activity_record($consultation);
+
 consultation_no_guest_access($consultation, $cm, $course);
 
 $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 require_capability('mod/consultation:deleteany', $context);
 
-$count = count_records('consultation_posts', 'inquiryid', $inquiry->id);
-$firstpost = reset(get_records('consultation_posts', 'inquiryid', $inquiry->id, 'timecreated', '*', 0, 1));
+$count = $DB->count_records('consultation_posts', array('inquiryid'=>$inquiry->id));
+$firstpost = reset($DB->get_records('consultation_posts', array('inquiryid'=>$inquiry->id), 'timecreated', '*', 0, 1));
 
 if ($count > 1 and $post->id == $firstpost->id) {
     redirect('inquiry.php?id='.$inquiry->id, get_string('cannotdeleteinquiry', 'consultation'));
@@ -69,15 +62,15 @@ if ($confirm and confirm_sesskey()) {
     // this is not acceptable, we have to finish it!
     ignore_user_abort(true);
 
-    fulldelete($CFG->dataroot.'/'.consultation_get_moddata_post_dir($post, $consultation));
-    if (!delete_records('consultation_posts', 'id', $post->id)) {
-        error('Can not delete post');
-    }
+    //TODO: delete attachments
+
+    $DB->delete_records('consultation_posts', array('id'=>$post->id));
+
     // log actions
     add_to_log($course->id, 'consultation', 'participate inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
 
     if ($count == 1) {
-        if (!delete_records('consultation_inquiries', 'id', $inquiry->id)) {
+        if (!$DB->delete_records('consultation_inquiries', array('id'=>$inquiry->id))) {
             error('Can not delete post');
         }
         redirect('view.php?id='.$cm->id);
@@ -86,23 +79,20 @@ if ($confirm and confirm_sesskey()) {
     }
 }
 
-$strconsultations = get_string('modulenameplural', 'consultation');
+$output = $PAGE->get_renderer('mod_consultation');
 
-$navlinks = array(array('name'=>format_string($inquiry->subject), 'link'=>'', 'type'=>'title'));
-$navigation = build_navigation($navlinks, $cm);
+echo $output->header();
 
-print_header_simple($consultation->name, '', $navigation, '', '', true);
-
-$optionsyes = array('id'=>$post->id, 'confirm'=>1, 'sesskey'=>sesskey());
-$optionsno  = array('id'=>$inquiry->id);
+$optionsyes = new moodle_url('/mod/consultation/delete.php', array('id'=>$post->id, 'confirm'=>1, 'sesskey'=>sesskey()));
+$optionsno  = new moodle_url('/mod/consultation/inquiry.php', array('id'=>$inquiry->id));
 if ($count == 1) {
     $strconfirm = get_string('confirmdeleteinquiry', 'consultation', format_string($inquiry->subject));
 } else {
-    $options = (object)array('para'=>false);
-    $shortened = format_text($post->message, $post->messageformat, $options, $course->id);
+    $options = (object)array('para'=>false, 'context'=>$context);
+    $shortened = format_text($post->message, $post->messageformat, $options);
     $strconfirm = get_string('confirmdeletepost', 'consultation', $shortened);
 }
-notice_yesno($strconfirm, 'delete.php', 'inquiry.php', $optionsyes, $optionsno, 'post', 'get');
+echo $output->confirm($strconfirm, $optionsyes, $optionsno);
 
-print_footer($course);
+echo $output->footer();
 

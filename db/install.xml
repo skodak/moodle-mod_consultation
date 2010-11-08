@@ -11,7 +11,7 @@
         <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="course" NEXT="intro"/>
         <FIELD NAME="intro" TYPE="text" LENGTH="medium" NOTNULL="false" SEQUENCE="false" ENUM="false" COMMENT="Default comment for the field, please edit me" PREVIOUS="name" NEXT="introformat"/>
         <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" COMMENT="Default comment for the field, please edit me" PREVIOUS="intro" NEXT="openlimit"/>
-        <FIELD NAME="openlimit" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" COMMENT="maximum number of consulations" PREVIOUS="introformat" NEXT="deleteafter"/>
+        <FIELD NAME="openlimit" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" COMMENT="maximum number of consultations" PREVIOUS="introformat" NEXT="deleteafter"/>
         <FIELD NAME="deleteafter" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" COMMENT="Delete resolved inquiries after X days" PREVIOUS="openlimit" NEXT="edittime"/>
         <FIELD NAME="edittime" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" COMMENT="how long editing allowed" PREVIOUS="deleteafter" NEXT="notify"/>
         <FIELD NAME="notify" TYPE="int" LENGTH="4" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" COMMENT="notification flag" PREVIOUS="edittime" NEXT="timemodified"/>
@@ -60,18 +60,4 @@
       </KEYS>
     </TABLE>
   </TABLES>
-  <STATEMENTS>
-    <STATEMENT NAME="insert log_display" TYPE="insert" TABLE="log_display" COMMENT="Initial insert of records on table log_display">
-      <SENTENCES>
-        <SENTENCE TEXT="(module, action, mtable, field) VALUES ('consultation', 'view', 'consultation', 'name')" />
-        <SENTENCE TEXT="(module, action, mtable, field) VALUES ('consultation', 'view all', 'consultation', 'name')" />
-        <SENTENCE TEXT="(module, action, mtable, field) VALUES ('consultation', 'update', 'consultation', 'name')" />
-        <SENTENCE TEXT="(module, action, mtable, field) VALUES ('consultation', 'open inquiry', 'consultation_inquiries', 'subject')" />
-        <SENTENCE TEXT="(module, action, mtable, field) VALUES ('consultation', 'view inquiry', 'consultation_inquiries', 'subject')" />
-        <SENTENCE TEXT="(module, action, mtable, field) VALUES ('consultation', 'participate inquiry', 'consultation_inquiries', 'subject')" />
-        <SENTENCE TEXT="(module, action, mtable, field) VALUES ('consultation', 'resolve inquiry', 'consultation_inquiries', 'subject')" />
-        <SENTENCE TEXT="(module, action, mtable, field) VALUES ('consultation', 'reopen inquiry', 'consultation_inquiries', 'subject')" />
-      </SENTENCES>
-    </STATEMENT>
-  </STATEMENTS>
 </XMLDB>

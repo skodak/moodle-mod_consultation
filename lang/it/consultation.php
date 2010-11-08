@@ -87,6 +87,7 @@ $string['noinquiries'] = 'Al momento non sono pervenute richieste.';
 $string['numstartedinquiries'] = '{$a} richieste';
 $string['openconsultation'] = 'Inserisci richiesta';
 $string['openconsultations'] = 'Consultazioni aperte';
+$string['pluginname'] = 'Consultazione';
 $string['refresh'] = 'Aggiorna';
 $string['reopeninquiry'] = 'Riapri';
 $string['resetconsultationsall'] = 'Elimina tutte le richieste';

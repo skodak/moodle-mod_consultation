@@ -32,7 +32,7 @@ class mod_consultation_mod_form extends moodleform_mod {
 
     function definition() {
 
-        $mform =& $this->_form;
+        $mform = $this->_form;
 
         $config = get_config('consultation');
 
@@ -43,10 +43,7 @@ class mod_consultation_mod_form extends moodleform_mod {
         $mform->setType('name', PARAM_TEXT);
         $mform->addRule('name', null, 'required', null, 'client');
 
-        $mform->addElement('htmleditor', 'intro', get_string('modintro', 'consultation'));
-        $mform->setType('intro', PARAM_RAW);
-        $mform->addRule('intro', null, 'required', null, 'client');
-        $mform->addElement('format', 'introformat', get_string('format'));
+        $this->add_intro_editor(true, get_string('modintro', 'consultation'));
 
         $options = array (0=>get_string('no'), 1=>1, 5=>5, 10=>10, 30=>30, 60=>60);
         $mform->addElement('select', 'edittime', get_string('modedittime', 'consultation'), $options);
@@ -67,13 +64,6 @@ class mod_consultation_mod_form extends moodleform_mod {
         $mform->addElement('advcheckbox', 'notify', get_string('modnotify', 'consultation'));
         $mform->setDefault('notify', $config->notify);
         $mform->setAdvanced('notify', $config->notify_adv);
-
-//-------------------------------------------------------------------------------
-        $features = new object();
-        $features->groups           = true;
-        $features->groupings        = true;
-        $features->groupmembersonly = true;
-        $this->standard_coursemodule_elements($features);
 
 //-------------------------------------------------------------------------------
         $this->add_action_buttons();

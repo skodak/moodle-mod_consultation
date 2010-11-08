@@ -46,6 +46,9 @@ function xmldb_consultation_upgrade($oldversion) {
     // === 1.9.x upgrade line === //
 
 
+    //TODO: files
+    //return "$consultation->course/$CFG->moddata/consultation/$consultation->id/$post->id";
+
     return true;
 }
 

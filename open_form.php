@@ -32,15 +32,13 @@ class consultation_open_form extends moodleform {
     function definition() {
         global $CFG, $USER;
 
-        $mform =& $this->_form;
+        $mform = $this->_form;
 
         $consultation = $this->_customdata['consultation'];
         $cm     = $this->_customdata['cm'];
         $course = $this->_customdata['course'];
 
         $context = get_context_instance(CONTEXT_MODULE, $cm->id);
-
-        $this->set_upload_manager(new upload_manager('attachment', true, false, $course, false, 0, true, true, false));
 
         $limit = 0;
         if ($consultation->openlimit and !has_capability('mod/consultation:openany', $context)) {
@@ -68,13 +66,11 @@ class consultation_open_form extends moodleform {
         $mform->setType('subject', PARAM_TEXT);
         $mform->addRule('subject', get_string('required'), 'required', null, 'client');
 
-        $mform->addElement('htmleditor', 'message',  get_string('message', 'consultation'), array('cols'=>80, 'rows'=>20));
+        $mform->addElement('editor', 'message',  get_string('message', 'consultation'), array('cols'=>80, 'rows'=>20, 'context'=>$context));
         $mform->setType('message', PARAM_RAW); // cleaned before printing or editing
         $mform->addRule('message', get_string('required'), 'required', null, 'client');
-        $mform->setHelpButton('message', array('reading', 'writing', 'questions', 'richtext'), false, 'editorhelpbutton');
-        $mform->addElement('format', 'messageformat',  get_string('format'));
 
-        $mform->addElement('file', 'attachment', get_string('attachment', 'consultation'));
+        $mform->addElement('filepicker', 'attachment', get_string('attachment', 'consultation'));
 
 
         $mform->addElement('hidden', 'id');
@@ -85,7 +81,7 @@ class consultation_open_form extends moodleform {
 
     function validation($data, $files) {
         $errors = parent::validation($data, $files);
-        if ($data['userto'] <= 0) {
+        if (!isset($data['userto']) or $data['userto'] <= 0) {
             $errors['userto'] = get_string('required');
         }
         return $errors;

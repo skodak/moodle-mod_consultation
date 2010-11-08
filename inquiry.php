@@ -30,23 +30,19 @@ require_once('locallib.php');
 $cid    = required_param('id', PARAM_INT);            // one inquiry detail
 $action = optional_param('action', '', PARAM_ACTION); // action
 
-if (!$inquiry = get_record('consultation_inquiries', 'id', $cid)) {
-    error('Inquiry id is incorrect');
-}
+$inquiry      = $DB->get_record('consultation_inquiries', array('id'=>$cid), '*', MUST_EXIST);
+$consultation = $DB->get_record('consultation', array('id'=>$inquiry->consultationid), '*', MUST_EXIST);
+$course       = $DB->get_record('course', array('id'=>$consultation->course), '*',MUST_EXIST);
+$cm           = get_coursemodule_from_instance('consultation', $consultation->id, $course->id, false, MUST_EXIST);
 
-if (!$consultation = get_record('consultation', 'id', $inquiry->consultationid)) {
-    error('Course module is incorrect');
-}
-
-if (!$course = get_record('course', 'id', $consultation->course)) {
-    error('Course is misconfigured');
-}
-
-if (!$cm = get_coursemodule_from_instance('consultation', $consultation->id, $course->id)) {
-    error('Course Module ID was incorrect');
-}
+$PAGE->set_url('/mod/consultation/inquiry.php', array('id' => $cm->id));
 
 require_login($course, false, $cm);
+
+$PAGE->set_title($course->shortname.': '.$consultation->name);
+$PAGE->set_heading($course->fullname);
+$PAGE->set_activity_record($consultation);
+
 consultation_no_guest_access($consultation, $cm, $course);
 
 $context = get_context_instance(CONTEXT_MODULE, $cm->id);
@@ -55,20 +51,14 @@ if ($inquiry->userfrom != $USER->id and $inquiry->userto != $USER->id) {
     require_capability('mod/consultation:viewany', $context);
 }
 
-$strconsultation  = get_string('modulename', 'consultation');
-$strconsultations = get_string('modulenameplural', 'consultation');
-
-$navlinks = array(array('name'=>format_string($inquiry->subject), 'link'=>'', 'type'=>'title'));
-$navigation = build_navigation($navlinks, $cm);
+$output = $PAGE->get_renderer('mod_consultation');
 
 if ($action === 'resolve') {
-    print_header_simple($consultation->name, '', $navigation, '', '', true,
-                        update_module_button($cm->id, $course->id, $strconsultation), navmenu($course, $cm));
-
-    $optionsyes = array('id'=>$inquiry->id, 'action'=>'confirmresolve', 'sesskey'=>sesskey());
-    $optionsno  = array('id'=>$inquiry->id);
-    notice_yesno(get_string('confirmclosure', 'consultation', format_string($inquiry->subject)), 'inquiry.php', 'inquiry.php', $optionsyes, $optionsno, 'post', 'get');
-    print_footer($course);
+    echo $output->header();
+    $optionsyes = new moodle_url('/mod/consultation/inquiry.php', array('id'=>$inquiry->id, 'action'=>'confirmresolve', 'sesskey'=>sesskey()));
+    $optionsno  = new moodle_url('/mod/consultation/inquiry.php', array('id'=>$inquiry->id));
+    echo $output->confirm(get_string('confirmclosure', 'consultation', format_string($inquiry->subject)), $optionsyes, $optionsno);
+    echo $output->footer();
     die;
 
 } else if ($action === 'confirmresolve' and confirm_sesskey()) {
@@ -78,23 +68,19 @@ if ($action === 'resolve') {
         require_capability('mod/consultation:resolveany', $context);
     }
 
-    set_field('consultation_inquiries', 'timemodified', time(), 'id', $inquiry->id);
-    if (!set_field('consultation_inquiries', 'resolved', 1, 'id', $inquiry->id)) {
-        error('Resolve consultation: unable to set resolved');
-    }
+    $DB->set_field('consultation_inquiries', 'timemodified', time(), array('id'=>$inquiry->id));
+    $DB->set_field('consultation_inquiries', 'resolved', 1, array('id'=>$inquiry->id));
 
     // log actions
     add_to_log($course->id, 'consultation', 'resolve inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
     redirect("view.php?id=$cm->id");
 
 } else if ($action === 'reopen') {
-    print_header_simple($consultation->name, '', $navigation, '', '', true,
-                        update_module_button($cm->id, $course->id, $strconsultation), navmenu($course, $cm));
-
-    $optionsyes = array('id'=>$inquiry->id, 'action'=>'confirmreopen', 'sesskey'=>sesskey());
-    $optionsno  = array('id'=>$inquiry->id);
-    notice_yesno(get_string('confirmreopen', 'consultation', format_string($inquiry->subject)), 'inquiry.php', 'inquiry.php', $optionsyes, $optionsno, 'post', 'get');
-    print_footer($course);
+    echo $output->header();
+    $optionsyes = new moodle_url('/mod/consultation/inquiry.php', array('id'=>$inquiry->id, 'action'=>'confirmreopen', 'sesskey'=>sesskey()));
+    $optionsno  = new moodle_url('/mod/consultation/inquiry.php', array('id'=>$inquiry->id));
+    echo $output->confirm(get_string('confirmreopen', 'consultation', format_string($inquiry->subject)), $optionsyes, $optionsno);
+    echo $output->footer();
     die;
 
 } else if ($action === 'confirmreopen' and confirm_sesskey()) {
@@ -104,10 +90,8 @@ if ($action === 'resolve') {
         require_capability('mod/consultation:reopenany', $context);
     }
 
-    set_field('consultation_inquiries', 'timemodified', time(), 'id', $inquiry->id);
-    if (!set_field('consultation_inquiries', 'resolved', 0, 'id', $inquiry->id)) {
-        error('Resolve consultation: unable to set resolved');
-    }
+    $DB->set_field('consultation_inquiries', 'timemodified', time(), array('id'=>$inquiry->id));
+    $DB->set_field('consultation_inquiries', 'resolved', 0, array('id'=>$inquiry->id));
 
     // log actions
     add_to_log($course->id, 'consultation', 'reopen inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
@@ -118,19 +102,22 @@ if ($action === 'resolve') {
 // log actions
 add_to_log($course->id, 'consultation', 'view inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
 
-print_header_simple($consultation->name, '', $navigation, '', '', true,
-                    update_module_button($cm->id, $course->id, $strconsultation), navmenu($course, $cm));
+echo $output->header();
 
-print_box(format_text($consultation->intro, $consultation->introformat), 'generalbox consultationintro');
+if (trim(strip_tags($consultation->intro))) {
+    echo $output->box_start('mod_introbox');
+    echo format_module_intro('consultation', $consultation, $cm->id);
+    echo $output->box_end();
+}
 
 $currenttab = $inquiry->resolved ? 'resolved' : 'view';
 $mode = ($inquiry->userfrom != $USER->id and $inquiry->userto != $USER->id) ? 'others' : 'my';
-consultation_print_tabs($currenttab, $mode, $inquiry->id, $consultation, $cm, $course);
+echo $output->consultation_tabs($currenttab, $mode, $inquiry->id, $consultation, $cm, $course);
 
 /// we want to view the inquiry
 consultation_print_inquiry($inquiry, $consultation, $cm, $course, 'inquiry.php', array('id'=>$inquiry->id));
 
 consultation_mark_inquiry_read($inquiry, $consultation, $cm, $course);
 
-print_footer($course);
+echo $output->footer();
 

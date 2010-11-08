@@ -27,7 +27,7 @@
 require('../../config.php');
 require_once('locallib.php');
 
-$id   = optional_param('id', PARAM_INT);
+$id   = required_param('id', PARAM_INT);
 $mode = optional_param('mode', 'my', PARAM_ALPHA); // sub tab
 
 $cm = get_coursemodule_from_id('consultation', $id, 0, false, MUST_EXIST);
@@ -54,17 +54,17 @@ if (!in_array($mode, array('my', 'others')) or !has_capability('mod/consultation
 // log actions
 add_to_log($course->id, 'consultation', 'view', "resolved.php?id=$cm->id&mode=$mode", $consultation->id, $cm->id);
 
-$strconsultation  = get_string('modulename', 'mod_consultation');
-$strconsultations = get_string('modulenameplural', 'mod_consultation');
+$output = $PAGE->get_renderer('mod_consultation');
 
-$navlinks = array(array('name'=>$strconsultations, 'link' =>"index.php?id=$course->id", 'type'=>'activity'),
-                  array('name'=>$consultation->name, 'link' =>'', 'type'=>'activityinstance'));
-$navigation = build_navigation($navlinks);
+echo $output->header();
 
-echo $OUTPUT->header();
-echo $OUTPUT->box(format_text($consultation->intro, $consultation->introformat), 'generalbox consultationintro');
+if (trim(strip_tags($consultation->intro))) {
+    echo $output->box_start('mod_introbox');
+    echo format_module_intro('consultation', $consultation, $cm->id);
+    echo $output->box_end();
+}
 
-consultation_print_tabs('resolved', $mode, 0, $consultation, $cm, $course);
+echo $output->consultation_tabs('resolved', $mode, 0, $consultation, $cm, $course);
 
 /// show all my inquiries
 if ($mode === 'others') {
@@ -73,5 +73,5 @@ if ($mode === 'others') {
     consultation_print_my_inquiries('resolved', $consultation, $cm, $course, 'resolved.php', array('id'=>$cm->id, 'mode'=>$mode));
 }
 
-echo $OUTPUT->footer();
+echo $output->footer();
 

@@ -30,10 +30,7 @@ require_once($CFG->libdir.'/formslib.php');
 
 class mod_consultation_post_form extends moodleform {
     function definition() {
-        global $DB, $COURSE, $USER;
-
-        //TODO: files
-        //$this->set_upload_manager(new upload_manager('attachment', true, false, $COURSE, false, 0, true, true));
+        global $DB, $USER;
 
         $mform = $this->_form;
         $post         = $this->_customdata['current'];
@@ -46,10 +43,10 @@ class mod_consultation_post_form extends moodleform {
         if ($full) {
             $with = '';
             if ($inquiry->userto == $USER->id) {
-                $userwith = get_record('user', 'id', $inquiry->userfrom);
+                $userwith = $DB->get_record('user', array('id'=>$inquiry->userfrom), '*', MUST_EXIST);
                 $with = fullname($userwith);
             } else if ($inquiry->userfrom == $USER->id) {
-                $userwith = get_record('user', 'id', $inquiry->userto);
+                $userwith = $DB->get_record('user', array('id'=>$inquiry->userto), '*', MUST_EXIST);
                 $with = fullname($userwith);
             } else {
                 // interrupt
@@ -61,22 +58,11 @@ class mod_consultation_post_form extends moodleform {
             $mform->addElement('static', 'subject', get_string('subject', 'mod_consultation').':', format_string($inquiry->subject));
         }
         $size = $full ? array('cols'=>80, 'rows'=>20) : array('cols'=>40, 'rows'=>15);
-        $mform->addElement('htmleditor', 'message',  get_string('message', 'mod_consultation'), $size);
-        $mform->setType('message', PARAM_RAW); // cleaned before printing or editing
-        $mform->addRule('message', get_string('required'), 'required', null, 'client');
-        $mform->setHelpButton('message', array('reading', 'writing', 'questions', 'richtext'), false, 'editorhelpbutton');
-        $mform->addElement('format', 'messageformat',  get_string('format'));
+        $mform->addElement('editor', 'message_editor',  get_string('message', 'mod_consultation'), $size);
+        $mform->setType('message_editor', PARAM_RAW); // cleaned before printing or editing
+        $mform->addRule('message_editor', get_string('required'), 'required', null, 'client');
 
-        if (!empty($post->attachment)) {
-            $mform->addElement('static', 'attachmentname', get_string('currentattachment', 'mod_consultation'), $post->attachment);
-            $mform->addElement('checkbox', 'deleteattachment', get_string('deleteattachment', 'mod_consultation'));
-        }
-
-        $mform->addElement('file', 'attachment', get_string('attachment', 'mod_consultation'));
-
-        if (!empty($post->attachment)) {
-            $mform->disabledIf('attachment', 'deleteattachment', 'checked');
-        }
+        $mform->addElement('filepicker', 'attachment', get_string('attachment', 'mod_consultation'));
 
         $mform->addElement('hidden', 'inquiryid');
         $mform->setType('inquiryid', PARAM_INT);

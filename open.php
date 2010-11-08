@@ -30,20 +30,20 @@ require_once('open_form.php');
 
 $id = required_param('id', PARAM_INT);
 
-if (!$cm = get_coursemodule_from_id('consultation', $id)) {
-    error('Course Module ID was incorrect');
-}
+$cm = get_coursemodule_from_id('consultation', $id, false, MUST_EXIST);
+$course = $DB->get_record('course', array('id'=>$cm->course), '*', MUST_EXIST);
+$consultation = $DB->get_record('consultation', array('id'=>$cm->instance), '*', MUST_EXIST);
 
-if (!$course = get_record('course', 'id', $cm->course)) {
-    error('Course is misconfigured');
-}
-
-if (!$consultation = get_record('consultation', 'id', $cm->instance)) {
-    error('Course module is incorrect');
-}
+$PAGE->set_url('/mod/consultation/open.php', array('id' => $cm->id));
 
 require_login($course, false, $cm);
+
+$PAGE->set_title($course->shortname.': '.$consultation->name);
+$PAGE->set_heading($course->fullname);
+$PAGE->set_activity_record($consultation);
+
 consultation_no_guest_access($consultation, $cm, $course);
+
 
 $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 if (!has_capability('mod/consultation:openany', $context)) {
@@ -72,16 +72,14 @@ if ($data = $mform->get_data(false)) {
     $inquiry->timecreated    = $timenow;
     $inquiry->timemodified   = $timenow;
 
-    if (!$inquiry->id = insert_record('consultation_inquiries', addslashes_recursive($inquiry))) {
-        error('Can not insert new inquiry');
-    }
+    $inquiry->id = $DB->insert_record('consultation_inquiries', $inquiry);
 
     $post = new object();
     $post->inquiryid      = $inquiry->id;
     $post->userid         = $USER->id;
     $post->notified       = 0;
-    $post->message        = $data->message;
-    $post->messageformat  = $data->messageformat;
+    $post->message        = $data->message['text'];
+    $post->messageformat  = $data->message['format'];
     $post->seenon         = null;
     $post->notified       = 0;
     $post->timecreated    = $timenow;
@@ -91,13 +89,9 @@ if ($data = $mform->get_data(false)) {
         $post->attachment = $attachment;
     }
 
-    if (!$post->id = insert_record('consultation_posts', addslashes_recursive($post))) {
-        error('Can not insert new inquiry post');
-    }
+    $post->id = $DB->insert_record('consultation_posts', $post);
 
-    if ($post->attachment) {
-        $mform->save_files(consultation_get_moddata_post_dir($post, $consultation));
-    }
+    //TODO: attachments
 
     // log actions
     add_to_log($course->id, 'consultation', 'open inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
@@ -108,21 +102,21 @@ if ($data = $mform->get_data(false)) {
     redirect("view.php?id=$cm->id&cid=".$inquiry->id);
 }
 
-$strconsultation = get_string('modulename', 'consultation');
-$strconsultations = get_string('modulenameplural', 'consultation');
+$output = $PAGE->get_renderer('mod_consultation');
 
-$navlinks = array(array('name'=>get_string('openconsultation', 'consultation'), 'link'=>'', 'type'=>'title'));
-$navigation = build_navigation($navlinks, $cm);
+echo $output->header();
 
-print_header_simple($consultation->name, '', $navigation, '', '', true, update_module_button($cm->id, $course->id, $strconsultation), navmenu($course, $cm));
+if (trim(strip_tags($consultation->intro))) {
+    echo $output->box_start('mod_introbox');
+    echo format_module_intro('consultation', $consultation, $cm->id);
+    echo $output->box_end();
+}
 
-print_box(format_text($consultation->intro, $consultation->introformat), 'generalbox consultationintro');
+echo $output->consultation_tabs('open', 'none', 0, $consultation, $cm, $course);
 
-consultation_print_tabs('open', 'none', 0, $consultation, $cm, $course);
-
-groups_print_activity_menu($cm, "open.php?id=$cm->id");
+groups_print_activity_menu($cm, "$CFG->wwwroot/mod/consultation/open.php?id=$cm->id");
 
 $mform->display();
 
-print_footer($course);
+echo $output->footer();
 

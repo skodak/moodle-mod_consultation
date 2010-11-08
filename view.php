@@ -27,18 +27,18 @@
 require('../../config.php');
 require_once('locallib.php');
 
-$id   = optional_param('id', PARAM_INT);
+$id   = optional_param('id', 0, PARAM_INT);
 $c    = optional_param('c', 0, PARAM_INT);           // consultation id
 $mode = optional_param('mode', 'my', PARAM_ALPHA);   // sub tab
 
 if ($c) {
     $consultation = $DB->get_record('consultation', array('id'=>$c), '*', MUST_EXIST);
-    $course = $DB->get_record('course', array('id'=>$consultation->course), '*', MUST_EXIST);
-    $cm = get_coursemodule_from_instance('consultation', $consultation->id, $course->id, false, MUST_EXIST);
+    $course       = $DB->get_record('course', array('id'=>$consultation->course), '*', MUST_EXIST);
+    $cm           = get_coursemodule_from_instance('consultation', $consultation->id, $course->id, false, MUST_EXIST);
 
 } else { // id
-    $cm = get_coursemodule_from_id('consultation', $id, 0, false, MUST_EXIST);
-    $course = $DB->get_record('course', array('id'=>$cm->course), '*', MUST_EXIST);
+    $cm           = get_coursemodule_from_id('consultation', $id, 0, false, MUST_EXIST);
+    $course       = $DB->get_record('course', array('id'=>$cm->course), '*', MUST_EXIST);
     $consultation = $DB->get_record('consultation', array('id'=>$cm->instance), '*', MUST_EXIST);
 }
 
@@ -62,17 +62,17 @@ if (!in_array($mode, array('my', 'others')) or !has_capability('mod/consultation
 // log actions
 add_to_log($course->id, 'consultation', 'view', "view.php?id=$cm->id&mode=$mode", $consultation->id, $cm->id);
 
-$output = $PAGE->get_renderer('mod_folder');
+$output = $PAGE->get_renderer('mod_consultation');
 
 echo $output->header();
 
-if (trim(strip_tags($folder->intro))) {
-    echo $output->box_start('mod_introbox', 'pageintro');
+if (trim(strip_tags($consultation->intro))) {
+    echo $output->box_start('mod_introbox');
     echo format_module_intro('consultation', $consultation, $cm->id);
     echo $output->box_end();
 }
 
-consultation_print_tabs('view', $mode, 0, $consultation, $cm, $course);
+echo $output->consultation_tabs('view', $mode, 0, $consultation, $cm, $course);
 
 /// show all my inquiries
 if ($mode === 'others') {

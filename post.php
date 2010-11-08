@@ -32,23 +32,19 @@ require_once('post_form.php');
 $cid = required_param('inquiryid', PARAM_INT);
 $id  = optional_param('id', 0, PARAM_INT);
 
-if (!$inquiry = get_record('consultation_inquiries', 'id', $cid)) {
-    error('Inquiry id is incorrect');
-}
+$inquiry = $DB->get_record('consultation_inquiries', array('id'=>$cid), '*', MUST_EXIST);
+$consultation = $DB->get_record('consultation', array('id'=>$inquiry->consultationid), '*', MUST_EXIST);
+$course = $DB->get_record('course', array('id'=>$consultation->course), '*', MUST_EXIST);
+$cm = get_coursemodule_from_instance('consultation', $consultation->id, $course->id, false, MUST_EXIST);
 
-if (!$consultation = get_record('consultation', 'id', $inquiry->consultationid)) {
-    error('Course module is incorrect');
-}
-
-if (!$course = get_record('course', 'id', $consultation->course)) {
-    error('Course is misconfigured');
-}
-
-if (!$cm = get_coursemodule_from_instance('consultation', $consultation->id, $course->id)) {
-    error('Course Module ID was incorrect');
-}
+$PAGE->set_url('/mod/consultation/unread.php', array('id' => $cm->id));
 
 require_login($course, false, $cm);
+
+$PAGE->set_title($course->shortname.': '.$consultation->name);
+$PAGE->set_heading($course->fullname);
+$PAGE->set_activity_record($consultation);
+
 consultation_no_guest_access($consultation, $cm, $course);
 
 $context = get_context_instance(CONTEXT_MODULE, $cm->id);
@@ -59,11 +55,11 @@ if ($USER->id != $inquiry->userto and $USER->id != $inquiry->userfrom) {
 }
 
 if ($inquiry->resolved) {
-    error(get_string('inquiryalreadyresolved', 'consultation'), 'inquiry.php?id='.$inquiry->id);
+    print_error('inquiryalreadyresolved', 'consultation', 'inquiry.php?id='.$inquiry->id);
 }
 
 if ($id) {
-    $post = get_record('consultation_posts', 'id', $id, 'inquiryid', $inquiry->id);
+    $post = $DB->get_record('consultation_posts', array('id'=>$id, 'inquiryid'=>$inquiry->id));
 
     // can edit only own!
     if (!$post or $post->userid != $USER->id) {
@@ -79,63 +75,50 @@ if ($id) {
     $post->inquiryid = $inquiry->id;
 }
 
+$attachmentoptions = array('subdirs'=>false);
+
+$post = file_prepare_standard_editor($post, 'message', array('maxfiles'=>0));
+
 $mform = new mod_consultation_post_form('post.php', array('current'=>$post, 'inquiry'=>$inquiry, 'consultation'=>$consultation, 'cm'=>$cm, 'course'=>$course, 'full'=>true));
 
 if ($mform->is_cancelled()) {
     redirect('inquiry.php?id='.$inquiry->id);
 }
 
-if ($post = $mform->get_data(false)) {
+if ($post = $mform->get_data()) {
     // NOTE: user may double click or otherwise cancel this request
     // this is not acceptable, we have to finish it!
     ignore_user_abort(true);
+
+    $post->message       = $post->message_editor['text'];
+    $post->messageformat = $post->message_editor['format'];
 
     if ($post->id) {
         $post->timemodified = time();
         $post->seenon       = 0;
 
-        if (!empty($post->deleteattachment)) {
-            fulldelete($CFG->dataroot.'/'.consultation_get_moddata_post_dir($post, $consultation));
-            $post->attachment = '';
-        } else if ($attachment = $mform->get_new_filename()) {
-            $post->attachment = $attachment;
-        } else {
-            unset($post->attachment);
-        }
-
-        if (!update_record('consultation_posts', addslashes_recursive($post))) {
-            error('Can not update inquiry post');
-        }
-        if (!empty($post->attachment)) {
-            $mform->save_files(consultation_get_moddata_post_dir($post, $consultation));
-        }
-        set_field('consultation_inquiries', 'timemodified', $post->timemodified, 'id', $inquiry->id);
+        $DB->update_record('consultation_posts', $post);
+        $DB->set_field('consultation_inquiries', 'timemodified', $post->timemodified, array('id'=>$inquiry->id));
 
         // note: do not resend notification here
+
+        //TODO: save attachments
 
         // log actions
         add_to_log($course->id, 'consultation', 'participate inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
 
     } else {
-        $post->consultationid       = $consultation->id;
+        $post->consultationid = $consultation->id;
         $post->userid         = $USER->id;
         $post->timecreated    = time();
         $post->timemodified   = $post->timecreated;
         $post->notified       = 0;
-        if ($attachment = $mform->get_new_filename()) {
-            $post->attachment = $attachment;
-        } else {
-            $post->attachment = '';
-        }
 
-        if (!$post->id = insert_record('consultation_posts', addslashes_recursive($post))) {
-            error('Can not insert new inquiry post');
-        }
+        $post->id = $DB->insert_record('consultation_posts', $post);
 
-        if ($post->attachment) {
-            $mform->save_files(consultation_get_moddata_post_dir($post, $consultation));
-        }
-        set_field('consultation_inquiries', 'timemodified', $post->timemodified, 'id', $inquiry->id);
+        $DB->set_field('consultation_inquiries', 'timemodified', $post->timemodified, array('id'=>$inquiry->id));
+
+        //TODO: save attachments
 
         // notify users if needed
         consultation_notify($post, false, $inquiry, $consultation, $cm, $course);
@@ -147,12 +130,7 @@ if ($post = $mform->get_data(false)) {
     redirect("inquiry.php?id=$inquiry->id");
 }
 
-$strconsultations = get_string('modulenameplural', 'consultation');
-
-$navlinks = array(array('name'=>format_string($inquiry->subject), 'link'=>'', 'type'=>'title'));
-$navigation = build_navigation($navlinks, $cm);
-
-print_header_simple($consultation->name, '', $navigation, '', '', true);
+echo $OUTPUT->header();
 $mform->display();
-print_footer($course);
+echo $OUTPUT->footer();
 

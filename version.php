@@ -26,8 +26,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$module->version  = 2010072800;  // module version
-$module->release  = 'v0.91beta'; // human-friendly version name
-$module->requires = 2010072800;  // requires this Moodle version
+$module->version  = 2010101501;  // module version
+$module->release  = 'v2.00beta1'; // human-friendly version name
+$module->requires = 2010111300;  // requires this Moodle version
 $module->cron     = 60;
 

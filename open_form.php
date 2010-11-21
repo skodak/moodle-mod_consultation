@@ -40,7 +40,6 @@ class consultation_open_form extends moodleform {
 
         $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 
-        $limit = 0;
         if ($consultation->openlimit and !has_capability('mod/consultation:openany', $context)) {
             $alredayopened = consultation_count_started_inquiries($consultation, $USER->id);
             if ($alredayopened >= $consultation->openlimit) {
@@ -70,7 +69,7 @@ class consultation_open_form extends moodleform {
         $mform->setType('message', PARAM_RAW); // cleaned before printing or editing
         $mform->addRule('message', get_string('required'), 'required', null, 'client');
 
-        $mform->addElement('filepicker', 'attachment', get_string('attachment', 'consultation'));
+        $mform->addElement('filemanager', 'attachment', get_string('attachment', 'consultation'));
 
 
         $mform->addElement('hidden', 'id');

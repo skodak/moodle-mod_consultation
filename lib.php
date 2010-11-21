@@ -76,6 +76,8 @@ function consultation_delete_instance($id) {
     $DB->delete_records('consultation_inquiries', array('consultationid'=>$consultation->id));
     $DB->delete_records('consultation', array('id'=>$consultation->id));
 
+    // file are deleted automatically together with the context
+
     return true;
 }
 
@@ -89,20 +91,23 @@ function consultation_cron() {
 
     $now = time();
 
+    $mid = $DB->get_field('modules', 'id', array('name'=>'consultation'));
+
 /// delete old resolved consultations
-    $sql = "SELECT ci.id, c.id AS cid, c.course
+    $sql = "SELECT ci.id, c.id AS cid, c.course, cm.id AS cmid
               FROM {consultation_inquiries} ci
               JOIN {consultation} c ON c.id = ci.consultationid
+              JOIN {course_modules} cm ON (cm.instance = c.id AND cm.module = :mid)
              WHERE ci.resolved = 1 AND c.deleteafter <> 0 AND ci.timemodified < $now - (c.deleteafter*60*60*24)";
 
     $fs = get_file_storage();
-    $rs = $DB->get_recordset_sql($sql);
+    $rs = $DB->get_recordset_sql($sql, array('mid'=>$mid));
     foreach ($rs as $inquiry) {
-        //TODO: get context
+        $context = get_context_instance(CONTEXT_MODULE, $inquiry->cmid);
         $posts = $DB->get_records('consultation_posts', array('inquiryid' => $inquiry->id, 'attachment' => ''), 'id', 'id');
-            foreach ($posts as $post) {
-                //$fs->delete_area_files(); //TODO: add deleting of attachments
-            }
+        foreach ($posts as $post) {
+            $fs->delete_area_files($context->id, 'mod_consultation', 'attachment', $post->id);
+        }
         $DB->delete_records('consultation_posts', array('inquiryid'=>$inquiry->id));
         $DB->delete_records('consultation_inquiries', array('id'=>$inquiry->id));
     }
@@ -196,8 +201,10 @@ function consultation_reset_userdata($data) {
                                                                                   FROM {consultation_inquiries} c
                                                                                  WHERE c.consultationid = ?)", array($consultationid));
                 $DB->delete_records('consultation_inquiries', array('consultationid'=>$consultationid));
-                //$fs->delete_area_files(); TODO: add attachment delete
             }
+            $cm = get_coursemodule_from_instance('consultation', $consultationid);
+            $context = get_context_instance(CONTEXT_MODULE, $cm->id);
+            $fs->delete_area_files($context->id, 'mod_consultation', 'attachment');
         }
 
         $status[] = array('component'=>$componentstr, 'item'=>get_string('deleted'), 'error'=>false);
@@ -327,7 +334,7 @@ function consultation_user_outline($course, $user, $mod, $consultation) {
     }
     $info = reset($results);
 
-    $result = new object();
+    $result = new stdClass();
     $result->info = get_string('numstartedinquiries', 'mod_consultation', $info->icount);
     $result->time = $info->icreated;
     return $result;

@@ -62,7 +62,7 @@ class mod_consultation_post_form extends moodleform {
         $mform->setType('message_editor', PARAM_RAW); // cleaned before printing or editing
         $mform->addRule('message_editor', get_string('required'), 'required', null, 'client');
 
-        $mform->addElement('filepicker', 'attachment', get_string('attachment', 'mod_consultation'));
+        $mform->addElement('filemanager', 'attachment', get_string('attachment', 'mod_consultation'));
 
         $mform->addElement('hidden', 'inquiryid');
         $mform->setType('inquiryid', PARAM_INT);

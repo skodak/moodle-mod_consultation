@@ -62,7 +62,8 @@ if ($confirm and confirm_sesskey()) {
     // this is not acceptable, we have to finish it!
     ignore_user_abort(true);
 
-    //TODO: delete attachments
+    $fs = get_file_storage();
+    $fs->delete_area_files($context->id, 'mod_consultation', 'attachment', $post->id);
 
     $DB->delete_records('consultation_posts', array('id'=>$post->id));
 
@@ -70,9 +71,7 @@ if ($confirm and confirm_sesskey()) {
     add_to_log($course->id, 'consultation', 'participate inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
 
     if ($count == 1) {
-        if (!$DB->delete_records('consultation_inquiries', array('id'=>$inquiry->id))) {
-            error('Can not delete post');
-        }
+        $DB->delete_records('consultation_inquiries', array('id'=>$inquiry->id));
         redirect('view.php?id='.$cm->id);
     } else {
         redirect('inquiry.php?id='.$inquiry->id);

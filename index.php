@@ -53,7 +53,7 @@ $table = new object();
 $table->head  = array ($strname, $stropenconsultations, $strresolvedconsultations);
 $table->align = array ('center', 'center', 'center');
 
-$modinfo =& get_fast_modinfo($course);
+$modinfo = get_fast_modinfo($course);
 
 if (!isset($modinfo->instances['consultation'])) {
     $modinfo->instances['consultation'] = array();

@@ -71,12 +71,13 @@ if ($id) {
     }
 
 } else {
-    $post = new object();
+    $post = new stdClass();
     $post->inquiryid = $inquiry->id;
+    $post->id        = null;
 }
 
-$attachmentoptions = array('subdirs'=>false);
-
+$draftitemid = file_get_submitted_draft_itemid('attachment');
+file_prepare_draft_area($draftitemid, $context->id, 'mod_consultation', 'attachment', $post->id);
 $post = file_prepare_standard_editor($post, 'message', array('maxfiles'=>0));
 
 $mform = new mod_consultation_post_form('post.php', array('current'=>$post, 'inquiry'=>$inquiry, 'consultation'=>$consultation, 'cm'=>$cm, 'course'=>$course, 'full'=>true));
@@ -94,20 +95,16 @@ if ($post = $mform->get_data()) {
     $post->messageformat = $post->message_editor['format'];
 
     if ($post->id) {
+        $newpost = false;
+
         $post->timemodified = time();
         $post->seenon       = 0;
 
         $DB->update_record('consultation_posts', $post);
-        $DB->set_field('consultation_inquiries', 'timemodified', $post->timemodified, array('id'=>$inquiry->id));
-
-        // note: do not resend notification here
-
-        //TODO: save attachments
-
-        // log actions
-        add_to_log($course->id, 'consultation', 'participate inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
 
     } else {
+        $newpost = true;
+
         $post->consultationid = $consultation->id;
         $post->userid         = $USER->id;
         $post->timecreated    = time();
@@ -115,17 +112,18 @@ if ($post = $mform->get_data()) {
         $post->notified       = 0;
 
         $post->id = $DB->insert_record('consultation_posts', $post);
+    }
 
-        $DB->set_field('consultation_inquiries', 'timemodified', $post->timemodified, array('id'=>$inquiry->id));
+    $DB->set_field('consultation_inquiries', 'timemodified', $post->timemodified, array('id'=>$inquiry->id));
+    file_save_draft_area_files($data->attachment, $context->id, 'mod_consultation', 'attachment', $post->id);
 
-        //TODO: save attachments
-
+    if ($newpost) {
         // notify users if needed
         consultation_notify($post, false, $inquiry, $consultation, $cm, $course);
-
-        // log actions
-        add_to_log($course->id, 'consultation', 'participate inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
     }
+
+    // log actions
+    add_to_log($course->id, 'consultation', 'participate inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);
 
     redirect("inquiry.php?id=$inquiry->id");
 }

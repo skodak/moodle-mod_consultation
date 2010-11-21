@@ -50,6 +50,9 @@ if (!has_capability('mod/consultation:openany', $context)) {
     require_capability('mod/consultation:open', $context);
 }
 
+$draftitemid = file_get_submitted_draft_itemid('attachment');
+file_prepare_draft_area($draftitemid, $context->id, 'mod_consultation', 'attachment', null);
+
 $mform = new consultation_open_form(null, array('consultation'=>$consultation, 'cm'=>$cm, 'course'=>$course));
 $mform->set_data(array('id'=>$cm->id));
 
@@ -91,7 +94,7 @@ if ($data = $mform->get_data(false)) {
 
     $post->id = $DB->insert_record('consultation_posts', $post);
 
-    //TODO: attachments
+    file_save_draft_area_files($data->attachment, $context->id, 'mod_consultation', 'attachment', $post->id);
 
     // log actions
     add_to_log($course->id, 'consultation', 'open inquiry', "inquiry.php?id=$inquiry->id", $inquiry->id, $cm->id);

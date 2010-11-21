@@ -572,6 +572,7 @@ function consultation_print_my_inquiries($type, $consultation, $cm, $course, $ba
     $perpage = optional_param('perpage', 20, PARAM_INT);
     $sort    = optional_param('sort', 'timemodified', PARAM_ALPHA);
     $dir     = optional_param('dir', 'DESC', PARAM_ALPHA);
+
     //must whitelist sort and dir!
     $sort = in_array($sort, array('timemodified', 'timecreated', 'subject', 'userwith')) ? $sort : 'timemodified';
     $dir  = in_array($dir, array('ASC', 'DESC')) ? $dir : 'DESC';
@@ -809,19 +810,19 @@ function consultation_print_attachment($post, $inquiry, $cm, $consultation, $cou
     global $CFG, $OUTPUT;
     require_once($CFG->dirroot.'/lib/filelib.php');
 
-    return;
+    $fs = get_file_storage();
+    $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 
-    //TODO: print attachments
-    $output = '';
+    if (!$files = $fs->get_area_files($context->id, 'mod_forum', 'attachment', $post->id, "timemodified", false)) {
+        return;
+    }
 
-    $file = $post->attachment;
-    $icon = mimeinfo("icon", $file);
-    $type = mimeinfo("type", $file);
-    $ffurl = get_file_url(consultation_get_moddata_post_dir($post, $consultation).'/'.$post->attachment); //TODO
-
-    $image = '<img src="'.$OUTPUT->pix_url('f/'.$icon).'" class="icon" alt="" />'; //TODO: fix icon
-
-    echo "<br /><img src=\"$ffurl\" alt=\"\" />";
+    foreach ($files as $file) {
+        $mimetype = $file->get_mimetype();
+        $iconimage = '<img src="'.$OUTPUT->pix_url(file_mimetype_icon($mimetype)).'" class="icon" alt="'.$mimetype.'" />';
+        $path = moodle_url::make_pluginfile_url($context->id, 'mod_consultation', 'attachment', $post->id, $file->get_filepath(), $file->get_filename());
+        echo '<br /><a href="'.$path.'">'.$iconimage.' '.s($file->get_filename()).'</a>';
+    }
 }
 
 /**

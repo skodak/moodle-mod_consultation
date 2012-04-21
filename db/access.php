@@ -20,13 +20,25 @@
  *
  * @package    mod
  * @subpackage consultation
- * @copyright  2009 Petr Skoda {@link http://skodak.org}
+ * @copyright  2009-2012 Petr Skoda {@link http://skodak.org}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 $capabilities = array(
+
+    'mod/consultation:addinstance' => array(
+        'riskbitmask' => RISK_XSS,
+
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => array(
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW
+        ),
+        'clonepermissionsfrom' => 'moodle/course:manageactivities'
+    ),
 
     'mod/consultation:open' => array( // start consultation with somebody with mod/consultation:answer capability
         'riskbitmask' => RISK_SPAM,

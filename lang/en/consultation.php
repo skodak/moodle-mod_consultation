@@ -20,7 +20,7 @@
  *
  * @package    mod
  * @subpackage consultation
- * @copyright  2009 Petr Skoda {@link http://skodak.org}
+ * @copyright  2009-2012 Petr Skoda {@link http://skodak.org}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -36,6 +36,7 @@ $string['confirmclosure'] = 'Do you realy want to resolve inquiry <strong>{$a}</
 $string['confirmdeleteinquiry'] = 'Do you really want to delete inquiry <strong>{$a}</strong>?';
 $string['confirmdeletepost'] = 'Do you really want to delete following post?<br /><br />{$a}';
 $string['confirmreopen'] = 'Do you really want to reopen following inquiry?<br /><br />{$a}';
+$string['consultation:addinstance'] = 'Add a new consultation';
 $string['consultation:deleteany'] = 'Delete any consultation';
 $string['consultation:interrupt'] = 'Post in any inquiry';
 $string['consultation:answer'] = 'Answer inquiry';

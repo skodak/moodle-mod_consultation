@@ -20,14 +20,17 @@
  *
  * @package    mod
  * @subpackage consultation
- * @copyright  2009 Petr Skoda {@link http://skodak.org}
+ * @copyright  2009-2012 Petr Skoda {@link http://skodak.org}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$module->version  = 2010101501;  // module version
+$module->version  = 2012042100;  // module version
 $module->release  = 'v2.00beta1'; // human-friendly version name
 $module->requires = 2010111300;  // requires this Moodle version
 $module->cron     = 60;
+
+$module->component = 'mod_consultation'; // Full name of the plugin (used for diagnostics)
+$module->maturity  = MATURITY_ALPHA;
 
